@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="高一國文〈桃花源記〉養成遊戲：鐵拳教育・桃花源養成計畫。單檔、可離線遊玩（需連網載入字型與 Tailwind）。">
+<title>鐵拳教育：桃花源養成計畫</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%237f1d1d' width='64' height='64' rx='12'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='36' fill='%23f6eedf' font-family='serif'%3E桃%3C/text%3E%3C/svg%3E">
+<!-- 僅使用 Tailwind CDN 與原生 JS，不引入 React／Vue 等框架 -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { fontFamily: { serif: ["Noto Serif TC","serif"], sans: ["Noto Sans TC","sans-serif"] } } }
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* 《鐵拳教育：桃花源養成計畫》自訂樣式
+   視覺：水墨紙色 + 桃花 + 鐵拳殷紅；動畫與震動效果 */
+:root{
+  --ink:#1a1410;
+  --ink-2:#3a2e26;
+  --paper:#f6eedf;
+  --paper-2:#efe4d0;
+  --peach:#e45b4a;
+  --peach-2:#f4b8a8;
+  --blossom:#f7d0c8;
+  --leaf:#2d5a4a;
+  --gold:#c9a227;
+  --crimson:#b91c1c;
+  --ok:#2f7d4a;
+  --danger:#9f1239;
+}
+html,body{margin:0;padding:0;background:#1a1410;color:var(--ink);font-family:"Noto Serif TC","Noto Serif CJK TC",serif;}
+body{min-height:100vh;}
+#app{min-height:100vh;background:
+  radial-gradient(ellipse at top, #3a221c 0%, transparent 50%),
+  linear-gradient(180deg,#24180f 0%,#1a1410 40%,#2a1a16 100%);}
+
+.font-display{font-family:"Ma Shan Zheng","Noto Serif TC",cursive;}
+.font-ui{font-family:"Noto Sans TC","Noto Sans CJK TC",sans-serif;}
+
+/* 花瓣飄落 */
+.petal{position:fixed;top:-20px;width:12px;height:16px;background:radial-gradient(circle at 30% 30%,#fff,#f3a090 60%,#d45a4a);
+  border-radius:80% 0 80% 0;opacity:.85;pointer-events:none;z-index:5;animation:fall linear infinite;}
+@keyframes fall{
+  0%{transform:translateY(-10vh) rotate(0deg);opacity:0}
+  10%{opacity:.9}
+  100%{transform:translateY(110vh) rotate(360deg);opacity:.2}
+}
+
+.screen{display:none;min-height:100vh;position:relative;z-index:10;}
+.screen.on{display:flex;}
+
+/* 頂欄 */
+#topbar{display:none;position:sticky;top:0;z-index:40;background:rgba(26,20,16,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(244,184,168,.25);color:#f6eedf;}
+
+/* 能力條 */
+.stat-row{display:flex;align-items:center;gap:.5rem;}
+.stat-bar{flex:1;height:10px;background:#e8dcc8;border-radius:99px;overflow:hidden;border:1px solid #d7c4a5;}
+.stat-bar>i{display:block;height:100%;border-radius:99px;transition:width .45s ease;}
+.bar-wen>i{background:linear-gradient(90deg,#7c3a1d,#c2410c)}
+.bar-zi>i{background:linear-gradient(90deg,#9a3412,#ea580c)}
+.bar-yi>i{background:linear-gradient(90deg,#1e4d3b,#2d8a62)}
+.bar-si>i{background:linear-gradient(90deg,#1e3a5f,#3b82c4)}
+.bar-vit>i{background:linear-gradient(90deg,#166534,#4ade80)}
+.bar-stress>i{background:linear-gradient(90deg,#f59e0b,#b91c1c)}
+.bar-like>i{background:linear-gradient(90deg,#be185d,#fb7185)}
+.bar-hp>i{background:linear-gradient(90deg,#b91c1c,#f87171)}
+
+.card-paper{background:linear-gradient(180deg,#fbf6eb,#f3e6d0);border:1px solid #e2d0b0;
+  box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 #fff8;border-radius:1.1rem;}
+.card-ink{background:linear-gradient(180deg,#2a211a,#1a1410);border:1px solid rgba(244,184,168,.3);color:#f6eedf;border-radius:1.1rem;}
+
+.btn-peach{background:linear-gradient(180deg,#e45b4a,#b91c1c);color:#fff;border:0;border-bottom:3px solid #7f1d1d;
+  border-radius:.8rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .12s,filter .12s;}
+.btn-peach:hover{filter:brightness(1.08)}
+.btn-peach:active{transform:translateY(2px);border-bottom-width:1px;}
+.btn-ink{background:#2a211a;color:#f6eedf;border:1px solid #c9a227;border-radius:.8rem;cursor:pointer;}
+.btn-ghost{background:transparent;border:1px solid rgba(244,184,168,.45);color:#f6eedf;border-radius:.8rem;cursor:pointer;}
+.btn-gold{background:linear-gradient(180deg,#e8c547,#a37b12);color:#1a1410;border:0;border-bottom:3px solid #6b520c;border-radius:.8rem;font-weight:700;cursor:pointer;}
+
+/* 課表卡 */
+.act-card{cursor:pointer;transition:transform .15s,box-shadow .15s;user-select:none;}
+.act-card:hover{transform:translateY(-3px);}
+.act-card.picked{outline:3px solid #e45b4a;outline-offset:2px;}
+.slot-box{min-height:4.2rem;border:2px dashed #d4b896;border-radius:.8rem;background:#fffaf0;cursor:pointer;}
+.slot-box.filled{border-style:solid;border-color:#e45b4a;background:#fff1e8;}
+
+/* 燈箱 */
+#lightbox{display:none;position:fixed;inset:0;z-index:60;background:rgba(10,8,6,.72);align-items:center;justify-content:center;padding:1rem;}
+#lightbox.on{display:flex;}
+
+/* 戰鬥 */
+#battle-stage{position:relative;overflow:hidden;}
+#battle-stage.shake{animation:shake .35s ease;}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  15%{transform:translateX(-10px) rotate(-0.6deg)}
+  30%{transform:translateX(10px) rotate(.6deg)}
+  45%{transform:translateX(-8px)}
+  60%{transform:translateX(8px)}
+  75%{transform:translateX(-4px)}
+  90%{transform:translateX(4px)}
+}
+#battle-stage.shake-hard{animation:shakehard .4s ease;}
+@keyframes shakehard{
+  0%,100%{transform:translate(0,0)}
+  10%{transform:translate(-16px,4px) rotate(-1deg)}
+  25%{transform:translate(14px,-6px) rotate(1deg)}
+  40%{transform:translate(-12px,3px)}
+  55%{transform:translate(12px,-2px)}
+  70%{transform:translate(-7px,2px)}
+  85%{transform:translate(6px,-1px)}
+}
+.punch-fx{position:absolute;inset:0;pointer-events:none;display:none;align-items:center;justify-content:center;z-index:8;}
+.punch-fx.on{display:flex;animation:punchpop .45s ease;}
+@keyframes punchpop{
+  0%{transform:scale(.4) rotate(-20deg);opacity:0}
+  35%{transform:scale(1.25) rotate(8deg);opacity:1}
+  100%{transform:scale(1.6) rotate(0);opacity:0}
+}
+.flash-ok{animation:flashok .35s ease;}
+@keyframes flashok{0%{box-shadow:inset 0 0 0 0 rgba(228,91,74,0)} 40%{box-shadow:inset 0 0 80px 20px rgba(228,91,74,.45)} 100%{box-shadow:inset 0 0 0 0 rgba(228,91,74,0)}}
+.combo-pop{animation:combopop .4s ease;}
+@keyframes combopop{0%{transform:scale(.6);opacity:0}40%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
+
+.opt-btn{text-align:left;width:100%;border-radius:.9rem;padding:.85rem 1rem;background:#fffaf3;border:1px solid #e2d0b0;
+  font-family:"Noto Serif TC",serif;cursor:pointer;transition:transform .1s,background .1s;}
+.opt-btn:hover{background:#fff;transform:translateY(-1px);}
+.opt-btn.good{background:#dcfce7;border-color:#16a34a;}
+.opt-btn.bad{background:#fee2e2;border-color:#dc2626;}
+.opt-btn:disabled{cursor:default;opacity:.95;}
+
+/* 手風琴 */
+.acc-item{border:1px solid #e2d0b0;border-radius:.8rem;overflow:hidden;background:#fffaf3;margin-bottom:.6rem;}
+.acc-btn{width:100%;text-align:left;padding:.85rem 1rem;background:#f3e6d0;border:0;cursor:pointer;font-weight:700;font-family:"Noto Sans TC",sans-serif;}
+.acc-body{display:none;padding:1rem;line-height:1.85;color:#3a2e26;}
+.acc-body.open{display:block;}
+
+/* 注釋熱點 */
+.note-link{color:#9a3412;border-bottom:1px dotted #c2410c;cursor:pointer;}
+.note-link:hover{background:#fde8d8;}
+
+/* 證書 */
+#cert-paper{width:min(720px,100%);aspect-ratio:1.35/1;background:
+  linear-gradient(180deg,#fffaf0 0%,#f7ecd8 100%);
+  border:12px solid #7f1d1d;box-shadow:0 0 0 4px #c9a227, 0 20px 50px rgba(0,0,0,.4);
+  position:relative;color:#1a1410;overflow:hidden;}
+#cert-paper:before{content:"";position:absolute;inset:14px;border:1px solid #c9a227;pointer-events:none;}
+
+/* 對話角色 */
+.avatar-svg{width:96px;height:96px;}
+@media (min-width:768px){.avatar-svg{width:120px;height:120px;}}
+
+/* 平板與手機 */
+@media (max-width:768px){
+  .opt-btn{padding:.95rem .85rem;font-size:1rem;}
+}
+@media print{
+  body *{visibility:hidden;}
+  #screen-cert, #screen-cert *{visibility:visible;}
+  #screen-cert{display:flex!important;position:static;}
+  #cert-actions{display:none!important;}
+  #topbar{display:none!important;}
+  #cert-paper{box-shadow:none;margin:0 auto;}
+}
+
+/* 卷軸引言 */
+.story-scroll{background:#fbf6eb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23e8d0c4'/%3E%3C/svg%3E");
+  border-left:6px solid #e45b4a;padding:1.25rem 1.4rem;line-height:2;}
+
+.week-chip{display:inline-block;background:#7f1d1d;color:#f6eedf;border-radius:99px;padding:.15rem .7rem;font-size:.8rem;letter-spacing:.1em;}
+
+#toast{display:none;position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);z-index:70;
+  background:#1a1410;color:#f6eedf;padding:.7rem 1.1rem;border-radius:999px;border:1px solid #c9a227;white-space:nowrap;}
+#toast.on{display:block;animation:toastin .35s ease;}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+
+.stamp{width:84px;height:84px;border:4px solid #b91c1c;color:#b91c1c;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:900;transform:rotate(-12deg);
+  font-family:"Ma Shan Zheng",serif;font-size:1.35rem;letter-spacing:.1em;opacity:.9;}
+
+</style>
+</head>
+<body>
+<!-- ========== 畫面區：以 style.display 切換，避免 CSS 權重衝突 ========== -->
+
+<div id="petals"></div>
+<header id="topbar" class="font-ui">
+  <div class="max-w-6xl mx-auto px-3 py-2 flex flex-wrap items-center gap-2">
+    <div class="font-display text-xl text-rose-200 tracking-wider">鐵拳教育</div>
+    <div id="tb-week" class="text-sm text-amber-200/90">第 1 週</div>
+    <div id="tb-name" class="text-sm opacity-80"></div>
+    <div class="flex-1"></div>
+    <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-book">課文</button>
+    <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-save">存檔</button>
+    <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-mute">音效：開</button>
+    <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-menu">選單</button>
+  </div>
+</header>
+
+<!-- ===== 標題 ===== -->
+<section id="screen-title" class="screen on flex-col items-center justify-center px-4 py-10">
+  <div class="card-paper max-w-3xl w-full p-8 md:p-12 text-center relative overflow-hidden">
+    <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-rose-200/50"></div>
+    <div class="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-amber-100/70"></div>
+    <p class="week-chip font-ui relative">高一國文　第六課教材遊戲</p>
+    <h1 class="font-display text-5xl md:text-7xl leading-tight mt-4 relative text-rose-800">鐵拳教育</h1>
+    <h2 class="font-display text-3xl md:text-5xl text-stone-800 relative mt-1">桃花源養成計畫</h2>
+    <p class="mt-6 text-stone-600 leading-relaxed relative">亂世未平，理想難尋。一位精通拳腳的轉學生走進教室——<br class="hidden md:block">嚴老師說：<b>「會打架還不夠，課文答不出來，這一拳就算白練。」</b></p>
+    <p class="mt-3 text-stone-500 text-sm relative">以陶淵明〈桃花源記〉為核心的八週養成遊戲　・　熱血嚴師 × 課業修煉 × 多元結局</p>
+    <div class="relative mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+      <button type="button" id="btn-newgame" class="btn-peach font-ui px-8 py-3 text-lg">開始養成</button>
+      <button type="button" id="btn-continue" class="btn-ink font-ui px-8 py-3 text-lg" style="display:none">繼續遊戲</button>
+    </div>
+    <div class="relative mt-5 flex flex-wrap gap-3 justify-center text-sm font-ui">
+      <button type="button" id="btn-howto" class="underline text-stone-600">怎麼玩</button>
+      <button type="button" id="btn-open-teacher" class="underline text-stone-600">教師區</button>
+      <button type="button" id="btn-open-book-title" class="underline text-stone-600">先讀課文</button>
+    </div>
+  </div>
+  <p class="text-amber-100/70 text-xs mt-6 font-ui">本遊戲角色皆為原創。課文、注釋、題解、作者與自我評量依據教師提供之課本教材編寫。</p>
+</section>
+
+<!-- ===== 建立角色 ===== -->
+<section id="screen-create" class="screen flex-col items-center px-4 py-8">
+  <div class="card-paper max-w-3xl w-full p-6 md:p-8">
+    <h2 class="font-display text-3xl text-rose-800">轉學登記</h2>
+    <p class="text-stone-600 mt-1">為這位來到桃源高中的轉學生登記資料。證書上也會用到。</p>
+    <div class="grid md:grid-cols-2 gap-4 mt-6 font-ui">
+      <label class="block">學生姓名
+        <input id="in-name" class="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" maxlength="12" placeholder="例如：林桃源">
+      </label>
+      <label class="block">學校（選填，印證書用）
+        <input id="in-school" class="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" maxlength="30" placeholder="例如：○○高級中學">
+      </label>
+      <label class="block">班級
+        <input id="in-class" class="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" maxlength="16" placeholder="例如：一年三班">
+      </label>
+      <label class="block">座號
+        <input id="in-seat" class="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" maxlength="6" placeholder="例如：15">
+      </label>
+    </div>
+    <p class="mt-5 font-ui font-bold">外貌（原創角色，點選即可）</p>
+    <div id="look-picks" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"></div>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <button type="button" id="btn-create-go" class="btn-peach font-ui px-6 py-3">入學報到</button>
+      <button type="button" id="btn-create-back" class="btn-ink font-ui px-6 py-3 text-white">返回</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 故事 ===== -->
+<section id="screen-story" class="screen flex-col items-center px-4 py-8">
+  <div class="card-paper max-w-3xl w-full p-6 md:p-9">
+    <h2 class="font-display text-3xl text-rose-800">開學・緣溪行</h2>
+    <div id="story-body" class="story-scroll mt-4 text-[17px]"></div>
+    <button type="button" id="btn-story-go" class="btn-peach font-ui px-6 py-3 mt-6">走進教室</button>
+  </div>
+</section>
+
+<!-- ===== 主介面（養成儀表板） ===== -->
+<section id="screen-hub" class="screen flex-col px-3 md:px-6 py-4">
+  <div class="max-w-6xl w-full mx-auto grid lg:grid-cols-5 gap-4">
+    <div class="lg:col-span-2 space-y-4">
+      <div class="card-paper p-4 md:p-5">
+        <div class="flex items-start gap-3">
+          <div id="hub-avatar"></div>
+          <div class="flex-1">
+            <div id="hub-week-title" class="font-display text-2xl text-rose-800"></div>
+            <p id="hub-flavor" class="text-sm text-stone-600 mt-1 leading-relaxed"></p>
+            <p class="font-ui text-sm mt-2"><span id="hub-student"></span>　金錢 <b id="hub-money">50</b></p>
+          </div>
+        </div>
+        <div id="hub-stats" class="mt-4 space-y-2 text-sm"></div>
+      </div>
+      <div class="card-ink p-4 font-ui text-sm leading-relaxed">
+        <b class="text-amber-300">本週課表</b>
+        <p class="opacity-80 mt-1">選三個時段（上午／下午／晚間）。課業修煉會進入答題小遊戲；每週結束有小考或挑戰，答對就是一拳。</p>
+        <div id="hub-slots" class="grid grid-cols-3 gap-2 mt-3 text-stone-800"></div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button type="button" id="btn-start-week" class="btn-peach px-4 py-2">開始本週修煉</button>
+          <button type="button" id="btn-clear-slots" class="btn-ghost px-4 py-2">清空</button>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-3">
+      <div class="grid sm:grid-cols-2 gap-3" id="act-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 活動／小測驗 ===== -->
+<section id="screen-activity" class="screen flex-col items-center px-3 py-4">
+  <div class="card-paper max-w-3xl w-full p-5 md:p-7">
+    <div class="flex items-center justify-between gap-2">
+      <div>
+        <p id="act-kicker" class="week-chip font-ui"></p>
+        <h2 id="act-title" class="font-display text-3xl text-rose-800 mt-2"></h2>
+      </div>
+      <div id="act-progress" class="font-ui text-sm text-stone-500"></div>
+    </div>
+    <p id="act-lead" class="mt-3 text-stone-600"></p>
+    <div id="act-qbox" class="mt-4"></div>
+  </div>
+</section>
+
+<!-- ===== 戰鬥 ===== -->
+<section id="screen-battle" class="screen flex-col px-3 py-4">
+  <div id="battle-stage" class="card-ink max-w-4xl w-full mx-auto p-4 md:p-6 relative">
+    <div class="punch-fx" id="punch-fx"><div class="text-7xl md:text-8xl">拳</div></div>
+    <div class="flex justify-between items-center font-ui text-xs md:text-sm">
+      <div>
+        <div id="b-p-name" class="text-rose-200 font-bold"></div>
+        <div class="stat-bar bar-hp w-36 md:w-56 mt-1"><i id="b-p-hp" style="width:100%"></i></div>
+      </div>
+      <div class="text-center">
+        <div id="b-combo" class="font-display text-3xl text-amber-300">COMBO 0</div>
+        <div id="b-round" class="opacity-70"></div>
+      </div>
+      <div class="text-right">
+        <div id="b-e-name" class="text-amber-200 font-bold"></div>
+        <div class="stat-bar bar-hp w-36 md:w-56 mt-1 ml-auto"><i id="b-e-hp" style="width:100%"></i></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-4 items-end">
+      <div class="text-center">
+        <div id="b-p-art"></div>
+        <p class="text-rose-100 text-sm mt-1" id="b-p-label"></p>
+      </div>
+      <div class="text-center">
+        <div id="b-e-art"></div>
+        <p class="text-amber-100 text-sm mt-1" id="b-e-label"></p>
+      </div>
+    </div>
+    <div class="card-paper p-4 md:p-5 mt-4 text-stone-800">
+      <p id="b-q" class="text-lg leading-relaxed font-bold"></p>
+      <div id="b-opts" class="mt-3 space-y-2"></div>
+      <p id="b-explain" class="mt-3 text-sm leading-relaxed" style="display:none"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 週結算 ===== -->
+<section id="screen-week" class="screen flex-col items-center px-4 py-8">
+  <div class="card-paper max-w-2xl w-full p-6 md:p-8">
+    <h2 class="font-display text-3xl text-rose-800" id="week-sum-title">本週修煉總結</h2>
+    <div id="week-sum-body" class="mt-4 leading-relaxed space-y-3"></div>
+    <button type="button" id="btn-week-next" class="btn-peach font-ui px-6 py-3 mt-6">進入下一週</button>
+  </div>
+</section>
+
+<!-- ===== 結局 ===== -->
+<section id="screen-ending" class="screen flex-col items-center px-4 py-8">
+  <div class="card-paper max-w-2xl w-full p-6 md:p-8">
+    <p class="week-chip font-ui" id="end-kicker">結局</p>
+    <h2 class="font-display text-4xl text-rose-800 mt-2" id="end-title"></h2>
+    <div id="end-art" class="flex justify-center my-4"></div>
+    <div id="end-body" class="story-scroll text-[17px]"></div>
+    <div class="flex flex-wrap gap-3 mt-6 font-ui">
+      <button type="button" id="btn-to-cert" class="btn-gold px-6 py-3">領取結業證書</button>
+      <button type="button" id="btn-end-replay" class="btn-ink text-white px-6 py-3">重新養成</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 證書 ===== -->
+<section id="screen-cert" class="screen flex-col items-center px-4 py-6">
+  <div id="cert-paper" class="p-7 md:p-12">
+    <div class="text-center relative h-full flex flex-col">
+      <p class="font-ui tracking-[.4em] text-xs text-stone-500">桃源高中　鐵拳社 × 國文科教學遊戲</p>
+      <h2 class="font-display text-4xl md:text-5xl text-rose-800 mt-2">結業證書</h2>
+      <p class="font-display text-2xl text-stone-700" id="cert-sub">《鐵拳教育：桃花源養成計畫》</p>
+      <p class="mt-5 leading-loose text-left mx-auto max-w-xl" id="cert-text"></p>
+      <div id="cert-stats" class="text-sm font-ui mt-3 text-left mx-auto max-w-xl grid grid-cols-2 gap-x-4 gap-y-1"></div>
+      <div class="flex-1"></div>
+      <div class="flex justify-between items-end mt-4">
+        <div class="text-left text-sm font-ui" id="cert-meta"></div>
+        <div class="stamp" id="cert-stamp">鐵拳<br>認可</div>
+      </div>
+    </div>
+  </div>
+  <div id="cert-actions" class="flex flex-wrap gap-3 mt-5 font-ui">
+    <button type="button" id="btn-dl-cert" class="btn-gold px-6 py-3">下載證書圖片</button>
+    <button type="button" id="btn-print-cert" class="btn-peach px-6 py-3">列印</button>
+    <button type="button" id="btn-cert-home" class="btn-ink text-white px-6 py-3">回標題</button>
+  </div>
+</section>
+
+<!-- ===== 課文研讀 ===== -->
+<section id="screen-book" class="screen flex-col items-center px-3 py-6">
+  <div class="card-paper max-w-4xl w-full p-5 md:p-8">
+    <div class="flex flex-wrap items-center gap-2">
+      <h2 class="font-display text-3xl text-rose-800">課文研讀</h2>
+      <div class="flex-1"></div>
+      <button type="button" id="btn-book-back" class="btn-ink font-ui text-white px-4 py-2">返回</button>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-4 font-ui text-sm" id="book-tabs"></div>
+    <div id="book-body" class="mt-4 leading-[2.05] text-[17px]"></div>
+  </div>
+</section>
+
+<!-- ===== 教師區 ===== -->
+<section id="screen-teacher" class="screen flex-col items-center px-3 py-6">
+  <div class="card-paper max-w-4xl w-full p-5 md:p-8">
+    <div class="flex flex-wrap items-center gap-2">
+      <h2 class="font-display text-3xl text-rose-800">教師區</h2>
+      <div class="flex-1"></div>
+      <button type="button" id="btn-teacher-back" class="btn-ink font-ui text-white px-4 py-2">返回</button>
+    </div>
+    <p class="text-stone-600 mt-2">以下為課堂使用說明、學習重點與自我評量參考答案。建議課堂投影前先收合答案區。</p>
+    <div id="teacher-acc" class="mt-5"></div>
+    <div class="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 font-ui">
+      <b>課堂快速模式</b>
+      <p class="text-sm mt-1 text-stone-600">新開一局時可改為 4 週壓縮版，方便單堂或兩堂課跑完整養成與結局。</p>
+      <button type="button" id="btn-quick-mode" class="btn-peach px-4 py-2 mt-3">以快速模式開新局（4週）</button>
+      <button type="button" id="btn-preview-ends" class="btn-ink text-white px-4 py-2 mt-3">預覽全部結局說明</button>
+    </div>
+    <div id="ends-preview" style="display:none" class="mt-4 text-sm leading-relaxed"></div>
+  </div>
+</section>
+
+<div id="lightbox"><div class="card-paper max-w-lg w-full p-5 md:p-7 relative">
+  <button type="button" id="lb-close" class="absolute top-3 right-3 font-ui text-sm px-2 py-1 rounded bg-stone-200 text-stone-700">關閉</button>
+  <h3 id="lb-title" class="font-display text-2xl text-rose-800 pr-16"></h3>
+  <div id="lb-body" class="mt-3 leading-relaxed"></div>
+  <div id="lb-actions" class="mt-5 flex flex-wrap gap-2 font-ui"></div>
+</div></div>
+<div id="toast" class="font-ui"></div>
+
+<script>
+/* ========== 題庫（依據課本課文、注釋、題解、作者、賞析、知識＋、自我評量） ========== */
+const QUESTIONS = [{"cat": "zi", "q": "「緣溪行」的「緣」，意義最接近下列哪一個？", "opts": ["緣故、原因", "沿著", "緣分", "邊緣"], "ans": 1, "explain": "注釋③：緣，沿著。故「緣溪行」即沿著溪水前行。", "source": "注釋"}, {"cat": "zi", "q": "「落英繽紛」的「英」，在本課注釋中的意思是？", "opts": ["傑出的人才", "花", "葉子", "英氣"], "ans": 1, "explain": "注釋⑥：英，花。繽紛，交錯繁盛的樣子。「落英繽紛」指落花繁多的樣子。自我評量第1題亦以「英」不可換成「葉」設問。", "source": "注釋／自我評量"}, {"cat": "zi", "q": "下列「」內的字經代換後，何者文意產生改變？", "opts": ["「緣」溪行，忘路之遠近：沿", "芳草鮮美，落「英」繽紛：葉", "男女衣著，「悉」如外人：咸", "有良田、美池、桑竹之「屬」：類"], "ans": 1, "explain": "「英」是花，不能換成「葉」。其餘：緣＝沿、悉＝咸（都）、屬＝類，代換後文意不變。此為課本自我評量第1題。", "source": "自我評量"}, {"cat": "zi", "q": "「漁人甚異之」的「異」，注釋解釋為？", "opts": ["怪異的事物", "與眾不同", "覺得奇怪", "奇蹟"], "ans": 2, "explain": "注釋⑦：異，覺得奇怪。是動詞，表示漁人對眼前桃花林感到驚訝、詫異。", "source": "注釋"}, {"cat": "zi", "q": "「欲窮其林」的「窮」，意義是？", "opts": ["貧窮", "盡、走到盡頭", "追問", "困窘"], "ans": 1, "explain": "注釋⑧：窮，盡。故「欲窮其林」是想走到桃花林的盡頭。", "source": "注釋"}, {"cat": "zi", "q": "「便捨船，從口入」的「捨」，在本課中是指？", "opts": ["施捨給人", "捨棄理想", "離開", "捨不得"], "ans": 2, "explain": "注釋⑨：捨，離開。漁人離開船隻，從山口走進去。", "source": "注釋"}, {"cat": "zi", "q": "「初極狹，纔通人」的「纔」，正確理解是？", "opts": ["才能、本領", "同「才」，僅、只", "剛才", "絕對"], "ans": 1, "explain": "注釋⑩：纔通人，只能容一人通過。纔，同「才」，僅。課文用字為「纔」。", "source": "注釋"}, {"cat": "zi", "q": "「豁然開朗」在本課的意思是？", "opts": ["突然想通某個道理", "形容寬敞明亮", "性格開朗樂觀", "豁出去、不顧一切"], "ans": 1, "explain": "注釋⑪：豁然開朗，形容寬敞明亮。豁然，開闊的樣子。此處寫空間由狹窄驟然變得開闊，不是比喻心情或領悟。", "source": "注釋"}, {"cat": "zi", "q": "「屋舍儼然」的「儼然」，注釋是？", "opts": ["好像、彷彿", "莊嚴不可侵犯", "整齊的樣子", "忽然"], "ans": 2, "explain": "注釋⑫：儼然，整齊的樣子。是說村中房舍排列整齊，不是「儼然像什麼」。", "source": "注釋"}, {"cat": "zi", "q": "「桑竹之屬」的「屬」，意思是？", "opts": ["歸屬、隸屬", "囑咐", "類", "家屬"], "ans": 2, "explain": "注釋⑬：屬，類。即良田、美池、桑竹這一類事物。", "source": "注釋"}, {"cat": "zi", "q": "「阡陌交通」在文中的意思是？", "opts": ["交通運輸很便利", "田間小路交錯通達", "對外聯絡頻繁", "車輛往來不絕"], "ans": 1, "explain": "注釋⑭：阡陌交通，田間小路交錯通達。阡陌，田間縱橫的小路。與現代「交通癱瘓」的「交通」意義不同。", "source": "注釋"}, {"cat": "zi", "q": "同一詞語常因語境改變而意義不同。下列各組「」內詞語，何者用法前後相同？", "opts": ["「不足」為外人道也／守望相助本就是你我應做的事，「不足」掛齒", "阡陌「交通」，雞犬相聞／連假期間車潮湧現，觀光景點「交通」癱瘓", "來此「絕境」，不復出焉／震災摧毀家園，他們一家生活頓陷「絕境」", "乃不知有漢，「無論」魏、晉／君王下令追擊，叛亂者一律格殺「無論」"], "ans": 0, "explain": "（A）兩處「不足」皆為「不值得」。（B）「交通」分別是交錯通達／運輸；（C）「絕境」分別是與世隔絕之地／困境；（D）「無論」分別是更不用說／不管（格殺勿論）。此為課本自我評量第2題。", "source": "自我評量"}, {"cat": "zi", "q": "「悉如外人」的「悉」與「外人」，注釋如何解釋？", "opts": ["悉＝知道；外人＝外國人", "悉＝全；外人＝桃花源以外的人", "悉＝熟悉；外人＝陌生人", "悉＝都；外人＝神祕訪客"], "ans": 1, "explain": "注釋⑮：悉如外人，完全和桃花源以外的人相同。悉，全。可見桃花源人的衣著並不「仙氣飄飄」，而是跟外界普通人一樣。", "source": "注釋"}, {"cat": "zi", "q": "「黃髮垂髫」分別借指？", "opts": ["黃髮＝孩童，垂髫＝老人", "黃髮＝老人，垂髫＝幼童", "黃髮＝婦女，垂髫＝男子", "黃髮＝病弱者，垂髫＝年輕人"], "ans": 1, "explain": "注釋⑯⑰：黃髮，借指老人。髮色由白轉黃，是老年人特徵。垂髫，借指幼童。古時成年男子要束髮戴冠，而孩童髮式多披垂。髫，自前額垂下的頭髮。", "source": "注釋"}, {"cat": "zi", "q": "「便要還家」的「要」，正確解釋是？", "opts": ["重要、須要", "通「邀」，邀請", "要挾", "將要"], "ans": 1, "explain": "注釋⑲：要，通「邀」，邀請。桃花源人邀請漁人回到家中作客。", "source": "注釋"}, {"cat": "zi", "q": "「具答之」「一一為具言所聞」的「具」，意思是？", "opts": ["工具、具備", "詳盡", "具體的物品", "器具"], "ans": 1, "explain": "注釋⑱：具，詳盡。注釋㉗：具言，詳盡的述說。", "source": "注釋"}, {"cat": "zi", "q": "「咸來問訊」的「咸」是？", "opts": ["鹹味", "都", "真誠", "偶爾"], "ans": 1, "explain": "注釋⑳：咸來問訊，都來探問消息。咸，都。", "source": "注釋"}, {"cat": "zi", "q": "「率妻子邑人來此絕境」中的「妻子」，在文中是指？", "opts": ["只指配偶", "妻、子女", "女婿", "未婚妻"], "ans": 1, "explain": "注釋㉑：妻子邑人，妻、子女、鄉人。文言文「妻子」常兼指妻與子女，與白話不同。", "source": "注釋"}, {"cat": "zi", "q": "「來此絕境」的「絕境」，本課注釋是？", "opts": ["走投無路的困境", "與外界隔絕的地方", "絕美的勝境", "絕情背義之地"], "ans": 1, "explain": "注釋㉒：絕境，與外界隔絕的地方。不可用白話「陷入絕境」的「困境」義來理解。", "source": "注釋"}, {"cat": "zi", "q": "「乃不知有漢，無論魏、晉」的「乃」「無論」，意思分別是？", "opts": ["於是；不管", "竟然；更不用說", "才；無論何者", "只是；不論是非"], "ans": 1, "explain": "注釋㉕：乃，竟然。注釋㉖：無論，更不用說。他們連漢朝都不知道，更不用說後來的魏、晉了。", "source": "注釋"}, {"cat": "zi", "q": "文中兩個「遂」意義不同。下列敘述何者正確？", "opts": ["「遂與外人間隔」與「遂迷不復得路」的「遂」都是「於是」", "「遂與外人間隔」的「遂」是「於是」；「遂迷不復得路」的「遂」是「竟然」", "兩處「遂」都是「竟然」", "「遂與外人間隔」的「遂」是「完成」"], "ans": 1, "explain": "注釋㉓：遂，於是（遂與外人間隔）。注釋㉖：遂，竟然（遂迷不復得路）。同一字在不同語境意義不同，是本課重要字詞觀念。", "source": "注釋"}, {"cat": "zi", "q": "「皆嘆惋」的「嘆惋」，注釋解釋為？", "opts": ["讚嘆、嚮往", "感嘆惋惜", "驚嘆歡呼", "怨恨不滿"], "ans": 1, "explain": "注釋㉘：嘆惋，感嘆惋惜。桃花源人聽聞外界歷經漢、魏、晉的動亂，感到的是惋惜，而非羨慕嚮往。", "source": "注釋"}, {"cat": "zi", "q": "「餘人各復延至其家」的「延」，意思是？", "opts": ["拖延", "延伸", "邀請", "延續香火"], "ans": 2, "explain": "注釋㉙：延，邀請。與前文「要（邀）」呼應，寫村人不斷招待漁人。", "source": "注釋"}, {"cat": "zi", "q": "「此中人語云」的「語」，在這裡是？", "opts": ["語言、方言", "告訴", "議論紛紛", "諺語"], "ans": 1, "explain": "注釋㉚：語，告訴。是動詞，指桃花源人告訴漁人：「不足為外人道也。」", "source": "注釋"}, {"cat": "zi", "q": "「不足為外人道也」的「不足」，意思是？", "opts": ["不夠、缺欠", "不值得", "不可以能力不足之人", "不必補充"], "ans": 1, "explain": "注釋㉛：不足，不值得。整句是「不值得向外邊的人說」，含蓄要求漁人不要宣揚。", "source": "注釋"}, {"cat": "zi", "q": "「便扶向路，處處誌之」的「扶向路」「誌」，意思是？", "opts": ["攙扶向導；志願", "沿著先前的來路；做標記", "扶起倒下的路標；記載史誌", "扶助鄉里；雜誌"], "ans": 1, "explain": "注釋㉜：扶向路，沿著先前的來路。扶，沿著。向，先前。注釋㉝：誌，做標記。漁人一路留下記號，已不像來時「忘路之遠近」那樣不具心機。", "source": "注釋"}, {"cat": "zi", "q": "「及郡下，詣太守」的「郡下」「詣」，意思是？", "opts": ["郡的下方；到達而已", "即郡中，指武陵郡官署所在地；拜訪", "鄉下；質問", "郡界；請示神明"], "ans": 1, "explain": "注釋㉞：郡下，即郡中，指武陵郡官署所在地。注釋㉟：詣，拜訪。", "source": "注釋"}, {"cat": "zi", "q": "「欣然規往。未果，尋病終」的「規往」「未果」「尋」，意思依序是？", "opts": ["規定前往；沒有實現；不久", "按規矩去；沒結果；尋找", "規模很大地前往；尚未結果；尋常", "規劃路線；沒有果實；搜尋"], "ans": 0, "explain": "注釋㉙：規往，計劃前往。注釋㊵：未果，沒有實現。注釋㊱：尋，不久。劉子驥還沒成行，不久就病逝了。", "source": "注釋"}, {"cat": "zi", "q": "「後遂無問津者」的「問津」，本課如何解釋？", "opts": ["只問渡口在哪裡", "問路，此有探詢之意。津，渡口", "盤問津液、打聽內情", "質問渡船費"], "ans": 1, "explain": "注釋㊲：問津，問路，此有探詢之意。津，渡口。後世因此以「問津」表示探訪、探詢。", "source": "注釋"}, {"cat": "zi", "q": "「太元」是哪一位皇帝的年號？起迄約為西元何年？", "opts": ["東晉哀帝；三六五─三八三", "東晉孝武帝；三七六─三九六", "南朝宋文帝；四二四─四五三", "秦始皇；西元前二二一─二一〇"], "ans": 1, "explain": "注釋①：太元，東晉孝武帝年號（三七六─三九六）。題解也指出本文常藉明確年代增添真實感。", "source": "注釋"}, {"cat": "zi", "q": "課文中的「武陵」「南陽」，位置分別在今日何處？", "opts": ["武陵在江西九江；南陽在湖南常德", "武陵在湖南常德；南陽在河南南陽", "武陵在河南南陽；南陽在湖南常德", "兩地都在江西"], "ans": 1, "explain": "注釋②：武陵，晉代郡名，在今湖南常德。注釋㊲：南陽，晉代郡名，在今河南南陽。陶淵明故里則是潯陽柴桑（今江西九江），不要混淆。", "source": "注釋"}, {"cat": "zi", "q": "關於劉子驥，下列敘述何者正確？", "opts": ["他是武陵太守，派人尋訪桃花源", "名驎之，為人不慕名利，與陶淵明同列於《晉書・隱逸傳》", "他成功進入桃花源並定居", "他是虛構人物，正史中並無記載"], "ans": 1, "explain": "注釋㉘：劉子驥，名驎之，為人不慕名利，與陶淵明同列於《晉書・隱逸傳》。以真實隱士入文，正是賞析所說「讓虛構的故事增添了幾分真實色彩」。", "source": "注釋／賞析"}, {"cat": "wen", "q": "漁人發現桃花源的直接線索，先後順序何者正確？", "opts": ["先見山有小口，再逢桃花林，最後捨船", "緣溪而行，忽逢桃花林，林盡水源得一山，山有小口彷彿若有光", "先謁見太守，再沿標記進入山洞", "先遇到劉子驥帶路，再進入桃花林"], "ans": 1, "explain": "課文第一段：緣溪行→忽逢桃花林→欲窮其林→林盡水源，便得一山→山有小口，彷彿若有光→便捨船，從口入。", "source": "課文"}, {"cat": "wen", "q": "桃花源中人的祖先為何來到此地？", "opts": ["為了尋仙訪道、煉丹求長生", "先世避秦時亂，率妻子邑人來此絕境", "朝廷封賞一塊樂土給隱士", "漁人引導他們搬遷至此"], "ans": 1, "explain": "課文：「自云先世避秦時亂，率妻子邑人來此絕境，不復出焉，遂與外人間隔。」賞析也指出：「避秦時亂」合理交代出桃花源中人的來歷。", "source": "課文／賞析"}, {"cat": "wen", "q": "下列對桃花源內居民及生活景況的敘述，何者正確？", "opts": ["地小人稠，街道熙來攘往", "服飾保守，男女不相接觸", "小路蜿蜒，屋舍散落林野", "以農營生，衣食不虞匱乏"], "ans": 3, "explain": "文中寫「土地平曠，屋舍儼然，有良田、美池、桑竹之屬」「其中往來種作」「設酒、殺雞、作食」，可見以農為生、衣食無憂。（A）土地平曠並非擁擠；（B）未寫男女不相接觸，衣著且「悉如外人」；（C）屋舍儼然是整齊，不是散落林野。此為課本自我評量第5題。", "source": "自我評量／課文"}, {"cat": "wen", "q": "由「問今是何世，乃不知有漢，無論魏、晉」一句，可推知桃花源人：", "opts": ["長久避世離群，與外界脫節", "對外界充滿好奇，嚮往盛世", "行事傳統保守，難接受新知", "遠離紅塵，對世事絕口不提"], "ans": 0, "explain": "他們連漢朝都不知道，更不用說魏、晉，顯示自秦末避亂以來已與世隔絕、對外脫節。並非嚮往盛世，也不是「絕口不提」（他們主動詢問今是何世）。此為課本自我評量第6題。", "source": "自我評量"}, {"cat": "wen", "q": "「不足為外人道也」是誰對誰說的？用意為何？", "opts": ["漁人對太守說，勸他不要派兵", "桃花源中人告訴漁人，含蓄暗示不要對外宣揚", "劉子驥對漁人說，勸他隱居", "太守告誡屬下，不可洩漏天機"], "ans": 1, "explain": "「此中人語云：『不足為外人道也。』」是村中人告訴漁人。自我評量第7題指出：最符合其用意的是「含蓄暗示漁人不要對外宣揚」。", "source": "課文／自我評量"}, {"cat": "wen", "q": "漁人離開桃花源之後，做了哪些事？結果如何？", "opts": ["依約守秘，終身不再提起", "處處誌之，又去拜訪太守說明；後來尋向所誌，卻迷不復得路", "立刻帶領劉子驥進入桃花源定居", "把地圖賣給南陽商人，因而致富"], "ans": 1, "explain": "課文第三段：既出，便扶向路，處處誌之。及郡下，詣太守，說如此。太守即遣人隨其往，尋向所誌，遂迷不復得路。漁人違背了「不足為外人道」的叮囑。", "source": "課文"}, {"cat": "wen", "q": "劉子驥聽說桃花源後，結果是？", "opts": ["欣然前往並成功抵達", "與太守一起找到洞口", "欣然規往，未果，尋病終", "寫下《桃花源記》記錄此事"], "ans": 2, "explain": "「南陽劉子驥，高尚士也，聞之，欣然規往。未果，尋病終。後遂無問津者。」計劃前往卻沒能成行，不久病逝。", "source": "課文"}, {"cat": "wen", "q": "依課本賞析，全文主要可分為三段，重點依序是？", "opts": ["題解、作者、注釋", "漁人入源前的神祕過程；源中環境與生活；離開後追尋失敗，暗示理想不可復得", "秦亂、漢興、魏晉禪代", "寫景、抒情、說理平均三分"], "ans": 1, "explain": "賞析：第一段明確交代時間、地點，並寫進入之前由溪水、桃花林、山壁、洞口鋪陳的神祕氣氛；第二段敘述桃花源環境與生活；第三段續寫離開後太守追查、劉子驥尋訪失敗，以「後遂無問津者」作結，暗示理想世界不可復得。", "source": "賞析"}, {"cat": "wen", "q": "賞析指出，作者安排三種不同身分、動機的人物探訪桃花源，他們是？", "opts": ["陶淵明、陶侃、劉子驥", "懷抱心機且處處誌之的漁人、代表政治勢力的太守、品德高尚的隱士", "秦始皇、漢武帝、晉孝武帝", "黃髮、垂髫、邑人"], "ans": 1, "explain": "賞析：「懷抱心機且處處誌之的漁人、代表政治勢力的太守、品德高尚的隱士，都不得其門而入。」三種人都無法再入，意味理想世界須與世間紛擾隔絕才能保持單純美好。", "source": "賞析"}, {"cat": "wen", "q": "漁人最初能進入桃花源，後來自己和其他人卻再也找不到，賞析認為關鍵在於？", "opts": ["只有武陵人能進，外地人不能進", "接近理想的關鍵，乃在漁人最初的不具心機", "必須在太元年間才能進入", "要先向太守報備才有資格"], "ans": 1, "explain": "賞析：「在得人不得入間，暗示著接近理想的關鍵，乃在漁人最初的不具心機。」來時「忘路之遠近」，返時卻「處處誌之」並告知官府，心機一起，路便迷失。", "source": "賞析"}, {"cat": "wen", "q": "桃花源人初見漁人的反應是？", "opts": ["冷淡驅趕，立即封閉洞口", "乃大驚，問所從來，隨後便要還家，設酒殺雞作食", "立刻帶他去見太守", "要求他出示官方文書"], "ans": 1, "explain": "「見漁人，乃大驚，問所從來，具答之。便要還家，設酒、殺雞、作食。」先是驚訝詢問，隨即熱情招待。村中人更「咸來問訊」。", "source": "課文"}, {"cat": "wen", "q": "文中何者最能表現桃花源「人間淨土」而非「神異仙境」的特色？", "opts": ["人人長生不老、餐風飲露", "土地平曠、往來種作、衣著悉如外人、黃髮垂髫並怡然自樂", "有仙人授以道術和仙藥", "洞中一日、人間一年"], "ans": 1, "explain": "賞析說第二段所寫田園房舍、農耕、衣著飲食、人際互動，「看似平凡而真實」，「揭示這個樂園並非是想像中的仙鄉幻境」。知識＋所列「仙藥、結為夫婦、時間不同」等典型仙鄉情節，本文並未採用。", "source": "賞析／知識＋"}, {"cat": "wen", "q": "下列文句所寫，何者屬於漁人「尚未進入」桃花源時的見聞？", "opts": ["土地平曠，屋舍儼然", "黃髮垂髫，並怡然自樂", "夾岸數百步，中無雜樹，芳草鮮美，落英繽紛", "餘人各復延至其家，皆出酒食"], "ans": 2, "explain": "桃花林、芳草鮮美、落英繽紛是進入山口以前沿溪所見。其餘選項都是源中景象或招待情節。", "source": "課文"}, {"cat": "yi", "q": "「忘路之遠近」最準確的翻譯是？", "opts": ["忘記回家的路有多遠", "忘記走了多少距離", "不記得路的遠近哪個比較重要", "故意走遠路以免被人跟上"], "ans": 1, "explain": "注釋④：忘路之遠近，忘記走了多少距離。寫漁人專注前行、不具心機。", "source": "注釋"}, {"cat": "yi", "q": "「彷彿若有光」譯意最恰當的是？", "opts": ["確定裡面燈火通明", "隱約好像有光亮", "彷彿見到神仙放光", "好像自己心中突然開竅"], "ans": 1, "explain": "寫山口隱約透出光亮，既真實又帶神祕感，吸引漁人「便捨船，從口入」。", "source": "課文"}, {"cat": "yi", "q": "「阡陌交通，雞犬相聞」翻譯正確的是？", "opts": ["交通建設完善，雞犬的叫聲在車站都聽得到", "田間小路交錯通達，彼此都能聽到雞鳴狗叫", "道路壅塞，雞犬都受驚亂叫", "對外交通便利，農村與城市音訊相通"], "ans": 1, "explain": "寫村落之間小路縱橫、生活氣息相近，顯現安詳密近的田園社區，不是現代「交通」。", "source": "注釋／課文"}, {"cat": "yi", "q": "「乃不知有漢，無論魏、晉」翻譯最正確的是？", "opts": ["於是不知道有漢朝，無論魏還是晉都一樣亂", "竟然不知道有漢朝，更不用說魏、晉了", "他們拒絕承認漢、魏、晉的統治", "先不論漢朝，魏、晉才是重點"], "ans": 1, "explain": "「乃」＝竟然，「無論」＝更不用說。此句同時交代他們與世隔絕之久。", "source": "注釋"}, {"cat": "yi", "q": "下列文句省略了部分主語和賓語：「此人一一為①具言所聞，②皆嘆惋。餘人各復延③至其家，④皆出酒食。」哪個位置應填入「漁人」？", "opts": ["①", "②", "③", "④"], "ans": 2, "explain": "補出省略：漁人一一為（村人）詳述所見所聞，（村人）皆嘆惋。其餘人再邀請（漁人）到自己家，而（村人）拿出酒食。故③是漁人。此為課本自我評量第3題。", "source": "自我評量"}, {"cat": "yi", "q": "「率妻子邑人來此絕境，不復出焉，遂與外人間隔」翻譯最妥切的是？", "opts": ["帶著妻子和邑長來此絕美之境，常常外出，於是和外人保持距離", "帶領妻、子女和鄉人來到這與世隔絕的地方，不再出去，於是和外界分離隔絕", "率領家族攻打這個絕境，不再出兵，於是和敵人間隔一條河", "帶著妻子的家人來此，又離開，於是和外人只間隔一座山"], "ans": 1, "explain": "妻子＝妻與子女，邑人＝鄉人，絕境＝與外界隔絕之地，遂＝於是，間隔＝分離隔絕。", "source": "注釋"}, {"cat": "yi", "q": "「此人一一為具言所聞，皆嘆惋」意思是？", "opts": ["漁人把聽到的外界之事一一詳述，村人都感嘆惋惜", "村人把自己的見聞說給漁人聽，漁人讚嘆嚮往", "太守命人詳細記錄，大家都驚嘆羡慕", "劉子驥詳細詢問，漁人感到惋惜"], "ans": 0, "explain": "「此人」指漁人；「具言所聞」是詳述他所知道的外界情事；村人的反應是嘆惋（感嘆惋惜），不是羡慕。", "source": "課文／注釋"}, {"cat": "yi", "q": "「未果，尋病終。後遂無問津者」翻譯正確的是？", "opts": ["沒有水果，去尋找時病死，後來就沒人再問津貼", "沒有實現，不久病逝。此後竟然再也沒有探詢（桃花源）的人", "尚未結果，尋找病因到終點，後來沒人問渡口費用", "沒成功是因為迷路，隨即病終，於是再也沒有渡口"], "ans": 1, "explain": "未果＝沒有實現，尋＝不久，問津＝問路、探詢。收束全文，暗示理想世界從此不可復得。", "source": "注釋／題解"}, {"cat": "yi", "q": "「設酒、殺雞、作食」寫出的生活氣氛是？", "opts": ["殺伐、警戒、物資短缺", "熱情好客、衣食無憂的人情味", "官方宴請、講究排場", "祭祀神明、祈求長生"], "ans": 1, "explain": "以家常的酒食、殺雞招待陌生人，展現淳樸真誠、豐衣足食的民情，與亂世形成對比。", "source": "課文／賞析"}, {"cat": "yi", "q": "「中無雜樹，芳草鮮美，落英繽紛」主要寫出桃花林的何種景象？", "opts": ["樹木種類繁多、生態複雜", "純是桃樹、花草美盛、落花繁多", "秋天蕭瑟、落葉滿地", "人工修剪、整齊如園林官邸"], "ans": 1, "explain": "「中無雜樹」表示夾岸純為桃樹；「芳草鮮美」寫草之芳香美好；「落英繽紛」寫落花交錯繁盛。是進入桃花源前的神祕而美麗的鋪陳。", "source": "課文／注釋"}, {"cat": "yi", "q": "「山有小口，彷彿若有光。便捨船，從口入。初極狹，纔通人，復行數十步，豁然開朗。」這段空間變化，翻譯與理解何者最正確？", "opts": ["洞口寬敞明亮，漁人立刻駕車進入", "先是隱約有光，離開船從洞口進入；起初極窄只容一人，再走數十步才突然變得寬敞明亮", "山洞一路狹窄到底，始終不見天日", "漁人尚未進洞就已經看到整個平原"], "ans": 1, "explain": "空間由「彷彿有光→極狹纔通人→豁然開朗」層層推進，既是寫實路徑，也象徵由塵世進入理想世界須經過一段狹窄、稍有阻礙的過程。", "source": "課文／自我評量第8題"}, {"cat": "si", "q": "關於《桃花源記》的出處與文體關係，下列何者正確？", "opts": ["選自《昭明文選》，是一篇正式的史傳", "選自《陶淵明集》；文後有一首五言古詩相互呼應，本文通常被視為〈桃花源詩〉的序文", "選自《晉書・隱逸傳》，是劉子驥的傳記", "選自《歸去來辭》，是辭賦的序"], "ans": 1, "explain": "題解：本文選自《陶淵明集》。《桃花源記》文後有一首五言古詩，內容相互呼應，所以本文通常被視為〈桃花源詩〉的序文，為詩作增添了生動的情節。", "source": "題解"}, {"cat": "si", "q": "陶淵明創作本文的時代背景與寄託，下列說明何者最正確？", "opts": ["盛唐昇平，他寫來歌頌開元之治", "東晉末年政局混亂、社會紛擾，他無力改變，於是建構桃花源以寄託理想", "北宋黨爭，他藉此批評王安石變法", "他奉朝廷之命撰寫地方觀光誌"], "ans": 1, "explain": "題解：東晉末年，政局混亂，社會紛擾不定，陶淵明身處其中卻無力改變，於是創作本文，建構出一個獨立於紛亂社會外的美好世界──桃花源，藉以寄託理想。", "source": "題解"}, {"cat": "si", "q": "題解認為，桃花源「最終不可復得」隱含的感慨是？", "opts": ["對漁業資源枯竭的憂心", "理想失落的感慨，寓意深遠", "對劉子驥早逝的私怨", "批評漁人不識水性"], "ans": 1, "explain": "題解：「最終桃花源不可復得，則隱含著理想失落的感慨。其寓意深遠，留給後人無限想像。」", "source": "題解"}, {"cat": "si", "q": "關於陶淵明的名、字、籍貫與生卒，下列何者正確？", "opts": ["名亮，字陶淵，洛陽人；西元二〇〇─二七〇", "字元亮。一說名潛，字淵明。潯陽柴桑（今江西九江）人；三六五─四二七", "字淵明，建康人；四二七─四六五", "名侃，字元亮，武陵人；三七六─三九六"], "ans": 1, "explain": "作者：陶淵明，字元亮。一說名潛，字淵明。潯陽柴桑（今江西九江）人。生於東晉哀帝興寧三年（三六五），卒於南朝宋文帝元嘉四年（四二七）。", "source": "作者"}, {"cat": "si", "q": "陶淵明的家世與出仕經歷，下列敘述何者正確？", "opts": ["出身寒微，從未做過官", "為東晉名臣陶侃曾孫；四十一歲任彭澤令，到職八十餘日即辭官", "一生官至宰相，晚年才隱居", "他在太元中擔任武陵太守"], "ans": 1, "explain": "作者：出身沒落官宦家庭，為東晉名臣陶侃曾孫。年少有建功立業之志，因時局動亂，三十歲左右才出任幕僚之類小官。四十一歲任彭澤（今江西湖口）令，到職八十餘日毅然辭官。", "source": "作者"}, {"cat": "si", "q": "「不為五斗米折腰」在本課作者介紹中的意思與背景，下列何者正確？", "opts": ["陶淵明因糧價太低而辭官", "他厭惡官場汙濁，不肯為微俸彎腰屈就，於是辭去彭澤令", "五斗米是道教教派，他拒絕入教", "他要求加薪到五斛才肯上班"], "ans": 1, "explain": "作者：因厭惡官場汙濁，不願「為五斗米折腰」，到職八十餘日就毅然辭官，作〈歸去來辭〉表明心志。知識＋指出：晉朝薪水多發放米糧，《晉書・職官志》載最高官員「食俸日五斛」（五十斗），依此推算「五斗米」應是低階官員的日薪。", "source": "作者／知識＋"}, {"cat": "si", "q": "關於「五斗米」的說明，何者最符合課本「知識＋」？", "opts": ["是當時宰相一個月的俸祿", "應是低階官員的日薪；當時最高級別官員「食俸日五斛」（五十斗）", "等於現代的五斗櫃家具稅", "是漁人每天打漁的收穫"], "ans": 1, "explain": "知識＋「五斗米是什麼？」：晉朝官員薪水多是發放米糧為主的實物。《晉書・職官志》記載當時最高級別官員「食俸日五斛」（五十斗），依此推算，「五斗米」應是低階官員的日薪。", "source": "知識＋"}, {"cat": "si", "q": "陶淵明辭官後的人生選擇，與《桃花源記》的關係是？", "opts": ["辭官後立刻出任太守，本文是任內政績報告", "從此躬耕自給，不再出仕，〈桃花源記〉即是此一期間的作品", "他後來又為五斗米復職，本文是悔恨之作", "本文寫於他出仕之前，與歸隱無關"], "ans": 1, "explain": "作者：從此躬耕自給，不再出仕，〈桃花源記〉即是此一期間的作品。其一生高風亮節，性格率真，世稱靖節先生。", "source": "作者"}, {"cat": "si", "q": "陶淵明在文學史上被譽為「隱逸詩人之宗」，主要因為？", "opts": ["他專門寫邊塞戰爭、風格豪邁", "詩、文風格自然質樸，平淡而意味深長，內容多寫田園生活、隱居情趣", "他創作文言小說《世說新語》", "他擔任文學侍從，專門為皇帝寫詔書"], "ans": 1, "explain": "作者：陶淵明的詩、文風格自然質樸，平淡而意味深長。其詩作內容多寫田園生活，隱居情趣，被譽為「隱逸詩人之宗」。有《陶淵明集》行世。", "source": "作者"}, {"cat": "si", "q": "題解指出本文的主要筆法是？", "opts": ["純粹議論，逐條提出治國方案", "以小說敘事筆法，描寫漁人發現桃花源的過程，生動刻劃避世樂土的社會圖像", "以駢文對仗堆砌典故", "以日記體逐日記錄躬耕生活"], "ans": 1, "explain": "題解：全文以小說敘事筆法，描寫漁人發現桃花源的過程，生動刻劃出避世樂土的社會圖像，呈現作者心中的嚮往。", "source": "題解"}, {"cat": "si", "q": "老師請學生以「向陶淵明致敬」為主題構思廣告文案，下列何者不符合其心志？", "opts": ["一杯敬南山，一杯邀東籬，辭別彭澤（酒商）", "桃花流水武陵春，雞鳴犬吠幾度聞（房屋仲介）", "你也五斗米，我也五斗米，樂陶陶（米食餐廳）", "輕裝緩步歸去來，自在田園樂趣多（休閒民宿）"], "ans": 2, "explain": "陶淵明正因「不為五斗米折腰」而辭官，（C）把「五斗米」寫成一起快樂接受俸祿／米食，與他的心志相反。其餘或用東籬、南山、歸去來、桃花源田園，都能呼應其志。此為課本自我評量第4題。", "source": "自我評量／作者"}, {"cat": "si", "q": "下列敘述，何者最符合桃花源人對漁人說「不足為外人道也」的用意？", "opts": ["企圖提醒漁人勿與外人接觸", "委婉表達族人間的自憐自傷", "勉強同意接受漁人單獨到訪", "含蓄暗示漁人不要對外宣揚"], "ans": 3, "explain": "這是含蓄的叮囑：不值得向外邊人提起，即不要把此地宣揚出去。此為課本自我評量第7題。", "source": "自我評量"}, {"cat": "si", "q": "《桃花源記》寫漁人進入桃花源的經過，可解讀為「如何進入理想世界」的暗示。下列詮釋何者和文章本意相差最遠？", "opts": ["「忘路之遠近」：不具心機算計，在前行中自然可得", "「漁人甚異之」：德行高潔、與眾不同的人方能到達", "「便捨船，從口入」：捨棄世俗牽絆，才能接近理想", "「初極狹，纔通人」：追尋理想的過程可能稍有阻礙"], "ans": 1, "explain": "「漁人甚異之」只是說他對桃花林覺得奇怪，並非「唯有德行高潔者才能到達」。賞析強調的反而是漁人「最初的不具心機」。此為課本自我評量第8題。", "source": "自我評量／賞析"}, {"cat": "si", "q": "關於《桃花源記》寫作手法的說明，下列何者錯誤？", "opts": ["藉「晉太元」「武陵」「劉子驥」等線索，增加故事的真實性", "以「自云先世避秦時亂」合理交代歷史淵源，寫出百姓對混亂時局的厭棄", "用「及郡下，詣太守，說如此」短句鋪排，呈現漁人在保密和洩密間掙扎", "以「後遂無問津者」作結，暗示理想世界的失落"], "ans": 2, "explain": "漁人出而「說如此」，是直接把事情告訴太守，文中並未刻劃他在保密與洩密之間反覆掙扎；（C）的手法說明並不正確。其餘均符合題解、賞析。此為課本自我評量第9題。", "source": "自我評量／賞析"}, {"cat": "si", "q": "若以漁人進入桃花源後的見聞，為源中人繪製「幸福象限圖」，下列判斷何者最為適當？", "opts": ["「阡陌交通，雞犬相聞」顯示他們多獨來獨往，「社群關係」應落在較低度重要的二、三象限", "「黃髮垂髫，並怡然自樂」顯示老少歡聚無憂，「家庭生活」應落在高度滿意的一、二象限", "「見漁人，乃大驚，問所從來」顯示他們時刻戒備恐懼，「身心健康」應落在低度滿意的三、四象限", "「此人一一為具言所聞，皆嘆惋」顯示他們對外界更為驚嘆嚮往，「政治環境」應落在低度滿意的三、四象限"], "ans": 1, "explain": "（B）正確：黃髮垂髫並怡然自樂，家庭／世代生活高度滿意。（A）雞犬相聞恰好顯示鄰里相近，並非獨來獨往；（C）大驚是乍見外人的驚訝，不能推論他們日常恐懼、身心不健康；（D）嘆惋是對外界動亂的感嘆惋惜，不是驚嘆嚮往。此為課本自我評量第10題。", "source": "自我評量"}, {"cat": "si", "q": "「落英繽紛」「芳草鮮美」主要運用的寫作／修辭效果接近？", "opts": ["反諷官場", "視覺（兼嗅覺）摹寫，鋪陳桃林之美與神祕氣氛", "用典，直接引用《詩經》成句", "設問，向讀者發問"], "ans": 1, "explain": "以鮮美、繽紛等詞細寫所見所感，屬景象摹寫，為後文進入桃花源作美麗而懸疑的鋪陳。賞析謂之「看似自然卻透露著神祕的氛圍」。", "source": "課文／賞析"}, {"cat": "si", "q": "「初極狹，纔通人」與「豁然開朗」構成何種表現效果？", "opts": ["前後對比，以狹窄襯托後來的寬敞明亮，也暗示求理想須經一段曲折", "誇飾仙人法術", "雙關「開朗」的性格", "互文見義，兩句意思完全相同"], "ans": 0, "explain": "先寫極狹、僅容一人，再寫豁然開朗，空間對比強烈。自我評量第8題也將「初極狹」解讀為：追尋理想的過程可能稍有阻礙。", "source": "課文／賞析"}, {"cat": "si", "q": "漁人來時「忘路之遠近」，去時「處處誌之」，這種對照最能說明？", "opts": ["漁人記憶力忽好忽壞", "來時不具心機故能遇之，生出佔有、標記、告官的心機後便不可復得", "作者寫作前後矛盾", "誌是地方志，與路無關"], "ans": 1, "explain": "賞析以「不具心機」為接近理想的關鍵；「處處誌之」又「詣太守，說如此」，正是心機與官方勢力介入，終至「迷不復得路」。", "source": "賞析"}, {"cat": "si", "q": "作者以「晉太元中」、真實地名「武陵」「南陽」，以及史傳人物劉子驥入文，主要作用是？", "opts": ["炫耀地理知識", "讓虛構的故事增添真實色彩，使理想世界讀來若有其事、真假難辨", "為了符合史書體例，本文其實是正史", "諷刺劉子驥沒有方向感"], "ans": 1, "explain": "賞析：第一段明確交代時間、地點，讓虛構的故事增添了幾分真實色彩。問題與討論亦指出陶淵明運用虛實相生的筆法，使故事真假難辨。", "source": "賞析／問題與討論"}, {"cat": "si", "q": "課本「知識＋」提到傳統仙鄉故事常見情節。下列哪一項是仙鄉模式常見特點，但《桃花源記》並未採用？", "opts": ["須穿過洞穴進入", "離開後難以返回", "凡人與仙境美女結為夫婦", "位於山中"], "ans": 2, "explain": "知識＋所列八項特點中，本文有：山中、穿過洞穴、離開後難以返回等；但並無「與美女結為夫婦」「獲授道術／仙藥」「仙鄉時間與人界不同」等神異情節。這正符合賞析所說：樂園並非想像中的仙鄉幻境，而是充滿現實感的人間淨土。", "source": "知識＋／賞析"}, {"cat": "si", "q": "全文主線與支線的安排，依賞析說明應是？", "opts": ["主線是太守政績，支線是殺雞設酒", "以漁人誤入桃花源的經歷為主線，太守、劉子驥的追尋為支線，強化嚮往也流露理想失落的悵惘", "主線是劉子驥傳記，漁人只是引子", "沒有主線，全是風景描寫"], "ans": 1, "explain": "賞析開頭：「本文以漁人誤入桃花源的經歷為主線……再以太守、劉子驥的追尋為支線，強化對理想世界的嚮往，同時也流露出對於理想失落的悵惘。」", "source": "賞析"}, {"cat": "si", "q": "賞析認為，「桃花源」後來成為後世何種典型？", "opts": ["戰場與邊塞的典型", "理想國度的典型；這個充滿現實感的人間淨土，也隱含亂世中尋求安身立命的渴望", "官場升遷指南的典型", "航海探險日誌的典型"], "ans": 1, "explain": "賞析：全文平易自然，意旨寄託深遠，不僅切合陶淵明的隱逸人格，也隱含了人們在亂世中尋求安身立命的渴望。「桃花源」這個充滿現實感的人間淨土，也因此成為後世「理想國度」的典型。這也呼應學習重點：認識「桃花源」的形象，體會作者藉以寄託追尋理想世界的寓意。", "source": "賞析／學習重點"}, {"cat": "si", "q": "陶淵明為何不把桃花源寫成充滿神通的奇幻仙境？就課文與賞析，下列理解最接近的是？", "opts": ["因為他不會寫神怪小說", "他想寄託的是人間可以想像、值得嚮往的安樂社會，而非遙不可及的神仙世界", "因為當時禁止書寫神仙", "因為劉子驥要求寫實"], "ans": 1, "explain": "問題與討論第二題正要學生思考：為何不刻劃神異奇幻仙境。賞析強調其「看似平凡而真實」，是動亂東晉不可得的人間常態，也因此更能寄託對理想社會的嚮往。", "source": "問題與討論／賞析"}, {"cat": "si", "q": "依課本「知識＋：詩詞曲熱門植物」，「折柳」較為固定的文化意義是？", "opts": ["慶祝豐收", "表示送別", "祝福長壽", "象徵科舉及第"], "ans": 1, "explain": "知識＋：這些植物與古人生活息息相關，同時也有較為固定的美學意義，如：以「折柳」表示送別，以「竹」代表志節清高等。", "source": "知識＋"}, {"cat": "si", "q": "「（　）解虛心是我師」，古人愛它中空有節，常種植以自勉。空缺應填哪一種植物？", "opts": ["梅", "竹", "柳", "荷"], "ans": 1, "explain": "竹中空故言「虛心」（謙虛），有節故喻節操。此為課本自我評量第11題第（2）子題。", "source": "自我評量／知識＋"}, {"cat": "si", "q": "「自從有了陶淵明這位好友，（　）就算無人欣賞，也開成了蕭條秋色中一處亮眼的風景。」空缺應填？", "opts": ["桃", "荷", "菊", "松"], "ans": 2, "explain": "陶淵明「採菊東籬下」，菊是他最著名的植物意象，也象徵隱逸與晚節。此為自我評量第11題第（1）子題。", "source": "自我評量／作者"}, {"cat": "si", "q": "「冬日嚴寒，孤傲的（　）有著不屈的意志，要向世人證明雪地中也能開出花朵。」應填？", "opts": ["荷", "柳", "梅", "竹"], "ans": 2, "explain": "梅在雪中開花，向來象徵耐寒、孤傲與不屈。自我評量第11題第（3）子題。", "source": "自我評量"}, {"cat": "si", "q": "「（　）舞春風，枝頭上的花蕊為季節妝點紅豔，也為大地迎來了一片蝶亂蜂喧。」應填？", "opts": ["菊", "松", "桃", "梅"], "ans": 2, "explain": "桃花在春風中開放，紅豔且招蜂引蝶，也呼應本課「桃花林」「落英繽紛」。自我評量第11題第（4）子題。", "source": "自我評量"}, {"cat": "si", "q": "「總是出現在每個送別的場景，（　）用長長的枝條牽繫著旅人。」應填？", "opts": ["竹", "柳", "松", "荷"], "ans": 1, "explain": "知識＋：以「折柳」表示送別。柳枝細長，彷彿挽留行人。自我評量第11題第（5）子題。", "source": "自我評量／知識＋"}, {"cat": "si", "q": "「彷彿睿智的長者，（　）挺立在寒風中，對冷冽的環境報以它滿樹的針砭。」應填？", "opts": ["荷", "桃", "菊", "松"], "ans": 3, "explain": "松歲寒不凋，針葉如「針砭」（既寫松針，也雙關規勸）。自我評量第11題第（6）子題。", "source": "自我評量"}, {"cat": "si", "q": "「葉子出水很高，像亭亭舞者的裙，而（　）花就點綴在葉間，隨風送來淡淡清香。」應填？", "opts": ["荷", "梅", "菊", "桃"], "ans": 0, "explain": "荷葉高出水面、亭亭如蓋，荷花點綴其間。自我評量第11題第（7）子題。選項另有竹、松、柳、桃、梅、菊。", "source": "自我評量"}, {"cat": "si", "q": "下列對「桃花源」形象與寓意的綜合判斷，何者最符合本課學習重點？", "opts": ["它只是一篇遊記，沒有寄託", "它是作者在亂世中建構的理想世界形象，既有人間淨土的現實感，也寄託追尋與理想失落的感慨", "它主張以武力統一天下", "它鼓勵每個人都去告官、畫地圖，以便開發觀光"], "ans": 1, "explain": "學習重點：認識「桃花源」的形象，體會作者藉以寄託追尋理想世界的寓意。題解、賞析皆指出：這是獨立於紛亂社會之外的美好世界，最終不可復得則隱含理想失落。", "source": "學習重點／題解／賞析"}, {"cat": "si", "q": "賞析說三種人物「都不得其門而入」，意味著什麼？", "opts": ["桃花源其實從頭到尾都是漁人做夢", "只有讓桃花源與世間的紛擾隔絕，這個理想世界才能保持原有的單純美好", "太守品德不夠，只要換一個好官就能進入", "洞口太小，成年人都進不去"], "ans": 1, "explain": "賞析原文：「都不得其門而入，意味著只有讓桃花源與世間的紛擾隔絕，這個理想世界才能保持原有的單純美好。」", "source": "賞析"}, {"cat": "si", "q": "「黃髮垂髫，並怡然自樂」最能表現桃花源的哪一種內在精神？", "opts": ["尊卑分明、老人專政", "老少安樂、人情和諧、生命各得其所", "只注重兒童教育、忽略長者", "人人競爭、追求功名"], "ans": 1, "explain": "老人與幼童一併怡然自樂，寫出安詳和諧的生活精神，是問題與討論所說「內在精神」的重要印證，也與「家庭生活高度滿意」的評量相呼應。", "source": "課文／問題與討論"}, {"cat": "si", "q": "下列何者最能說明本文「虛實相生」的筆法？", "opts": ["全是神話，沒有任何現實細節", "一方面寫真實年號、地名、史傳人物與平凡農耕生活，一方面又讓樂土「不可復得」、帶有理想寄託", "完全依照《晉書》逐字抄錄", "只抒情、不敘事"], "ans": 1, "explain": "問題與討論第二題：陶淵明運用虛實相生的筆法描寫桃花源，使故事真假難辨。實的是時代、地理、人物與日常；虛的是可遇不可求的樂土及其寄託。", "source": "問題與討論"}];
+
+
+/* ========== 教材與遊戲資料 ========== */
+const TOTAL_WEEKS_STD = 8, TOTAL_WEEKS_QUICK = 4;
+const SAVE_KEY = "tiequan-taohua-v1";
+const CAT_NAME = {wen:"文力", zi:"字力", yi:"譯力", si:"思辨"};
+
+const LOOKS = [
+  {id:"ink", name:"墨黑", hair:"#1a1410", accent:"#7f1d1d"},
+  {id:"peach", name:"桃粉", hair:"#c14a5a", accent:"#be185d"},
+  {id:"bamboo", name:"竹青", hair:"#1f4a3a", accent:"#2d5a4a"},
+  {id:"amber", name:"栗棕", hair:"#6b3a1f", accent:"#9a3412"}
+];
+
+const ACTS = [
+  {id:"read", name:"晨讀課文", icon:"讀", cat:"wen", blurb:"誦讀〈桃花源記〉，走一遭漁人入源之路。", detail:"三題課文理解小遊戲。提升文力，壓力略增。"},
+  {id:"vocab", name:"字詞特訓", icon:"字", cat:"zi", blurb:"把注釋打進筋骨：緣、窮、要、遂、問津……", detail:"三題字詞注釋小遊戲。提升字力，壓力略增。"},
+  {id:"trans", name:"翻譯道場", icon:"譯", cat:"yi", blurb:"一句一句拆開，主語賓語都要抓到。", detail:"三題翻譯與文意小遊戲。提升譯力，壓力略增。"},
+  {id:"lecture", name:"題解作者講堂", icon:"講", cat:"si", blurb:"嚴老師拍桌：『陶淵明為什麼要寫這個世界！』", detail:"三題題解、作者、賞析、寓意、修辭。提升思辨與師父好感。"},
+  {id:"train", name:"鐵拳社練功", icon:"拳", cat:null, blurb:"先練心再練拳。體力回來，壓力散掉。", detail:"不考題。提升體力、降低壓力、增加師父好感。"},
+  {id:"work", name:"打工賺錢", icon:"金", cat:null, blurb:"有人說這叫體驗「五斗米」。錢會進來，人也會累。", detail:"賺取金錢，消耗體力，壓力上升。"},
+  {id:"rest", name:"休息", icon:"息", cat:null, blurb:"黃髮垂髫，並怡然自樂——你也該喘一口氣。", detail:"大幅降低壓力、回復體力。"},
+  {id:"explore", name:"外出探索桃花林", icon:"林", cat:null, blurb:"緣溪行，忘路之遠近。隨機事件在林子裡等你。", detail:"隨機事件，可能遇見同學、發現線索或碰上選擇。"}
+];
+
+const WEEKS = [
+  {n:1, title:"緣溪行", flavor:"轉學第一週。溪聲很近，功課更近。嚴老師已經站在教室門口。", boss:"小考・開筆"},
+  {n:2, title:"忽逢桃花林", flavor:"走廊尽头好像有風，吹來一點花瓣。同學開始約你一起讀注釋。", boss:"小考・字林"},
+  {n:3, title:"山有小口", flavor:"課文讀到洞口。嚴老師說：狹窄的地方最考真功夫。", boss:"挑戰・石無道"},
+  {n:4, title:"豁然開朗", flavor:"彷彿看見一片平曠的田。月考將近，空氣卻意外清亮。", boss:"月考・開朗"},
+  {n:5, title:"怡然自樂", flavor:"黃髮垂髫的句子讓教室安靜了一秒。原來樂土也可以很日常。", boss:"切磋・許清溪"},
+  {n:6, title:"不足為外人道", flavor:"有些話能說，有些話不該說。學生會長在走廊攔住你。", boss:"挑戰・司馬權"},
+  {n:7, title:"處處誌之", flavor:"漁人開始做記號。你也開始為期末複習畫重點——但別走歪。", boss:"模擬考・尋誌"},
+  {n:8, title:"後遂無問津者", flavor:"最後一週。理想會不會失落，就看你怎麼走完這段路。", boss:"期末大考・問津"}
+];
+
+/* 課本 42 則注釋（據教材原文整理） */
+const NOTES = {
+  1:["太元","東晉孝武帝年號（三七六─三九六）。"],
+  2:["武陵","晉代郡名，在今湖南常德。"],
+  3:["緣","沿著。"],
+  4:["忘路之遠近","忘記走了多少距離。"],
+  5:["夾岸","水流的兩岸。"],
+  6:["落英繽紛","落花繁多的樣子。英，花。繽紛，交錯繁盛的樣子。"],
+  7:["異","覺得奇怪。"],
+  8:["窮","盡。"],
+  9:["捨","離開。"],
+  10:["纔通人","只能容一人通過。纔，同「才」，僅。"],
+  11:["豁然開朗","形容寬敞明亮。豁然，開闊的樣子。"],
+  12:["儼然","整齊的樣子。"],
+  13:["屬","類。"],
+  14:["阡陌交通","田間小路交錯通達。阡陌，田間縱橫的小路。"],
+  15:["悉如外人","完全和桃花源以外的人相同。悉，全。"],
+  16:["黃髮","借指老人。髮色由白轉黃，是老年人特徵。"],
+  17:["垂髫","借指幼童。古時成年男子要束髮戴冠，而孩童髮式多披垂。髫，自前額垂下的頭髮。"],
+  18:["具","詳盡。"],
+  19:["要","通「邀」，邀請。"],
+  20:["咸來問訊","都來探問消息。咸，都。"],
+  21:["妻子邑人","妻、子女、鄉人。"],
+  22:["絕境","與外界隔絕的地方。"],
+  23:["遂（與外人間隔）","於是。"],
+  24:["間隔","分離隔絕。"],
+  25:["乃","竟然。"],
+  26:["無論","更不用說。"],
+  27:["具言","詳盡的述說。"],
+  28:["嘆惋","感嘆惋惜。"],
+  29:["延","邀請。"],
+  30:["語","告訴。"],
+  31:["不足","不值得。"],
+  32:["扶向路","沿著先前的來路。扶，沿著。向，先前。"],
+  33:["誌","做標記。"],
+  34:["郡下","即郡中，指武陵郡官署所在地。"],
+  35:["詣","拜訪。"],
+  36:["遂（迷不復得路）","竟然。"],
+  37:["南陽","晉代郡名，在今河南南陽。"],
+  38:["劉子驥","名驎之，為人不慕名利，與陶淵明同列於《晉書・隱逸傳》。"],
+  39:["規往","計劃前往。"],
+  40:["未果","沒有實現。"],
+  41:["尋","不久。"],
+  42:["問津","問路，此有探詢之意。津，渡口。"]
+};
+function n(num, text){ return `<span class="note-link" data-n="${num}">${text}</span>`; }
+
+const TEXT = {
+  title:"第六課　桃花源記　陶淵明",
+  goals:"認識「桃花源」的形象，體會作者藉以寄託追尋理想世界的寓意。",
+  jieti:`本文選自《陶淵明集》。《桃花源記》文後有一首五言古詩，內容相互呼應，所以本文通常被視為〈桃花源詩〉的序文，為詩作增添了生動的情節。
+<p>東晉末年，政局混亂，社會紛擾不定，陶淵明身處其中卻無力改變，於是創作本文，建構出一個獨立於紛亂社會外的美好世界——桃花源，藉以寄託理想。</p>
+<p>全文以小說敘事筆法，描寫漁人發現桃花源的過程，生動刻劃出避世樂土的社會圖像，呈現作者心中的嚮往。最終桃花源不可復得，則隱含著理想失落的感慨。其寓意深遠，留給後人無限想像。</p>`,
+  author:`陶淵明，字元亮。一說名潛，字淵明。潯陽柴桑（今江西九江）人。生於東晉哀帝興寧三年（三六五），卒於南朝宋文帝元嘉四年（四二七）。
+<p>陶淵明出身於沒落的官宦家庭，為東晉名臣陶侃曾孫，年少時有建功立業的大志，卻因時局動亂，三十歲左右才出任幕僚之類的小官。四十一歲時任彭澤（今江西湖口）令，又因厭惡官場汙濁，不願「為五斗米折腰」，到職八十餘日就毅然辭官，作〈歸去來辭〉表明心志。從此躬耕自給，不再出仕，〈桃花源記〉即是此一期間的作品。其一生高風亮節，性格率真，世稱靖節先生。</p>
+<p>陶淵明的詩、文風格自然質樸，平淡而意味深長。其詩作內容多寫田園生活，隱居情趣，被譽為「隱逸詩人之宗」。有《陶淵明集》行世。</p>`,
+  knowledge:`<h3 class="font-bold text-lg">知識＋　詩詞曲熱門植物</h3>
+<p>根據潘富俊《中國文學植物學》統計，歷代詩、詞、散曲總集中運用最為頻繁的植物依序為：柳、竹、松、荷、梅、桃，在其他作品也時有所見。這些植物與古人生活息息相關，同時也有較為固定的美學意義，如：以「折柳」表示送別，以「竹」代表志節清高等。</p>
+<h3 class="font-bold text-lg mt-4">知識＋　「五斗米」是什麼？</h3>
+<p>晉朝官員的薪水多是發放米糧為主的實物，《晉書・職官志》記載當時最高級別官員「食俸日五斛」（五十斗），依此推算，「五斗米」應是低階官員的日薪。</p>
+<h3 class="font-bold text-lg mt-4">知識＋　傳統仙鄉故事模式</h3>
+<p>「仙鄉」在此指的是脫離一般世俗的國度，類似神話中的仙境、秘境樂土。這些仙鄉故事的情節模式，大多有下列特點：</p>
+<ol class="list-decimal ml-6">
+<li>位於山中或海上</li><li>須穿過洞穴進入</li><li>獲得仙藥或食物</li><li>凡人與仙境美女結為夫婦</li>
+<li>獲授道術或得到贈物</li><li>懷鄉或勸歸</li><li>仙鄉時間與人界不同</li><li>離開後無法返回</li>
+</ol>
+<p class="mt-2">可對照課文：〈桃花源記〉具備山中、洞穴、離開後難以返回等特點，但並未寫成「與仙女成婚、仙藥道術、時間錯位」的神異仙境，而是充滿現實感的人間淨土。</p>`,
+  shangxi:`本文以漁人誤入桃花源的經歷為主線，藉由漁人見聞的描寫，來呈現這個無意中發現的避世淨土。再以太守、劉子驥的追尋為支線，強化對理想世界的嚮往，同時也流露出對於理想失落的悵惘。
+<p>全文分為三段：第一段明確交代時間、地點，讓虛構的故事增添了幾分真實色彩。漁人進入桃花源之前的過程，看似自然卻透露著神祕的氛圍，由溪水、桃花林、山壁、洞口，一氣呵成的鋪陳，營造出懸疑的氣氛。第二段敘述桃花源的環境和生活情形，田園房舍、農耕活動、衣著飲食、人際互動，以及安詳和諧、淳樸真誠的民情，看似平凡而真實，卻是動亂頻仍的東晉時期不可得的人間常態。「避秦時亂」合理交代出桃花源中人的來歷，揭示這個樂園並非是想像中的仙鄉幻境。第三段則續寫漁人離開後，太守追查和劉子驥尋訪的失敗，而以「後遂無問津者」作結，暗示理想世界不可復得。</p>
+<p>在文中，作者安排了不同身分和動機的三種人物去探訪桃花源：懷抱心機且處處誌之的漁人、代表政治勢力的太守、品德高尚的隱士，都不得其門而入，意味著只有讓桃花源與世間的紛擾隔絕，這個理想世界才能保持原有的單純美好。在得人不得入間，暗示著接近理想的關鍵，乃在漁人最初的不具心機。</p>
+<p>全文平易自然，意旨寄託深遠，不僅切合陶淵明的隱逸人格，也隱含了人們在亂世中尋求安身立命的渴望。「桃花源」這個充滿現實感的人間淨土，也因此成為後世「理想國度」的典型。</p>`,
+  discuss:`<ol class="list-decimal ml-6 space-y-3">
+<li>「桃花源」是陶淵明筆下理想世界的具體形象，請從「外在樣貌」和「內在精神」兩方面來說明桃花源特徵，並從課文中找出相關文句來加以印證。</li>
+<li>陶淵明運用虛實相生的筆法描寫桃花源，使故事真假難辨。請分別找出文中貼近現實和離奇虛構的部分，再進一步思考，陶淵明為什麼不刻劃出一個神異的奇幻仙境？他想表達的理念是什麼？</li>
+<li>你認為陶淵明的理想世界在現今社會有可能實現嗎？什麼樣的環境是你心目中適合居住的理想世界？又該如何實踐你心目中的理想世界呢？</li>
+</ol>
+<p class="mt-3 text-stone-500 text-sm">（課堂討論題，無標準單選答案。教師區提供引導方向。）</p>`,
+  lesson: "" // filled below in JS after n()
+};
+
+TEXT.lesson = `<p><b>一</b>　晉${n(1,"太元")}中，${n(2,"武陵")}人，捕魚為業。${n(3,"緣")}溪行，${n(4,"忘路之遠近")}，忽逢桃花林。${n(5,"夾岸")}數百步，中無雜樹，芳草鮮美，${n(6,"落英繽紛")}。漁人甚${n(7,"異")}之，復前行，欲${n(8,"窮")}其林。林盡水源，便得一山。山有小口，彷彿若有光。便${n(9,"捨")}船，從口入。</p>
+<p class="mt-4"><b>二</b>　初極狹，${n(10,"纔通人")}，復行數十步，${n(11,"豁然開朗")}。土地平曠，屋舍${n(12,"儼然")}，有良田、美池、桑竹之${n(13,"屬")}，${n(14,"阡陌交通")}，雞犬相聞。其中往來種作，男女衣著，${n(15,"悉如外人")}。${n(16,"黃髮")}${n(17,"垂髫")}，並怡然自樂。見漁人，乃大驚，問所從來，${n(18,"具")}答之。便${n(19,"要")}還家，設酒、殺雞、作食。村中聞有此人，${n(20,"咸來問訊")}。自云先世避秦時亂，率${n(21,"妻子邑人")}來此${n(22,"絕境")}，不復出焉，${n(23,"遂")}與外人${n(24,"間隔")}。問今是何世，${n(25,"乃")}不知有漢，${n(26,"無論")}魏、晉。此人一一為${n(27,"具言")}所聞，皆${n(28,"嘆惋")}。餘人各復${n(29,"延")}至其家，皆出酒食。停數日，辭去。此中人${n(30,"語")}云：「${n(31,"不足")}為外人道也。」</p>
+<p class="mt-4"><b>三</b>　既出，得其船，便${n(32,"扶向路")}，處處${n(33,"誌")}之。及${n(34,"郡下")}，${n(35,"詣")}太守，說如此。太守即遣人隨其往，尋向所誌，${n(36,"遂")}迷不復得路。${n(37,"南陽")}${n(38,"劉子驥")}，高尚士也，聞之，欣然${n(39,"規往")}。${n(40,"未果")}，${n(41,"尋")}病終。後遂無${n(42,"問津")}者。</p>
+<p class="mt-3 text-sm text-stone-500">點橘色詞可查看課本注釋。</p>`;
+
+
+const EVENTS = [
+  {id:"creek", title:"緣溪行", text:"放學後你沿著校園後山的溪走，不知不覺走遠了。風裡有花香。",
+   choices:[
+     {label:"繼續往前，不管走了多遠", eff:{si:3, stress:-4, explore:1}, t:"你沒有計較路程。嚴老師後來聽說，只丟下一句：「忘路之遠近，才有機會看見林子。」"},
+     {label:"立刻用手機定位、做標記", eff:{stress:2, flag:"mapped"}, t:"位置是記住了，溪聲卻好像遠了一點。"}
+   ]},
+  {id:"blossom", title:"忽逢桃花林", text:"社團教室窗外，竟然有一排開得正好的桃樹。方落英站在樹下喊你。",
+   choices:[
+     {label:"走過去一起看落英", eff:{likePeer:8, si:2, stress:-5}, t:"落英繽紛。落英說：「英是花，不是葉子喔。」你們笑成一團。"},
+     {label:"先回教室把注釋背完再來", eff:{zi:4, likePeer:2}, t:"你很自律。落英把一片花瓣夾進你的課本當書籤。"}
+   ]},
+  {id:"qingxi", title:"許清溪的筆記", text:"班上的溫柔學霸許清溪把厚厚一疊筆記推過來：「阡陌交通不是說公車。」",
+   choices:[
+     {label:"誠懇請教，一起訂正", eff:{zi:5, yi:3, likePeer:8}, t:"清溪眼睛亮了。「這樣才像阡陌相通。」"},
+     {label:"逞強說自己都會", eff:{likePeer:-3, stress:4}, t:"清溪喔了一聲，把筆記又收了回去。"}
+   ]},
+  {id:"wuling", title:"高武陵的加練", text:"鐵拳社學長高武陵把沙袋推向你：「老師說，體力不夠，期末會先倒下。」",
+   choices:[
+     {label:"加練一小時", eff:{vit:10, stress:4, likeMaster:4}, t:"拳風很響。武陵拍你肩膀：「下週小考別忘了，拳頭只能打沙袋。」"},
+     {label:"婉拒，改去複習翻譯", eff:{yi:5, likePeer:3, vit:-2}, t:"武陵哈哈大笑：「也行。讀書也是一種練。」"}
+   ]},
+  {id:"rice", title:"五斗米的誘惑", text:"便利商店缺晚班人力，時薪高得離譜。老闆說：「學生嘛，為五斗米彎一下腰很正常。」",
+   choices:[
+     {label:"拒絕：不想為五斗米折腰", eff:{si:6, likeMaster:6, money:0, flag:"refuseRice"}, t:"你想起陶淵明到職八十餘日就辭官。口袋沒加厚，脊梁卻挺著。"},
+     {label:"接下來幾個晚班", eff:{money:40, vit:-8, stress:10, si:-2, flag:"tookRice"}, t:"錢是拿到了。隔天晨讀，眼皮卻在打架。"}
+   ]},
+  {id:"mayor", title:"學生會長司馬權", text:"會長司馬權把你攔在走廊，笑得很官方：「聽說你找到了什麼讀書的『祕境』？告訴學生會，我可以給你加分和經費。」",
+   choices:[
+     {label:"婉拒，不足為外人道也", eff:{si:6, likeMaster:5, flag:"keptSecret"}, t:"會長臉色變了變，又恢復微笑。你把那份安靜留在自己心裡。"},
+     {label:"詳細說明並畫出路線", eff:{money:20, likeMaster:-6, si:-2, flag:"leaked"}, t:"你處處誌之，還說給『太守』聽。總覺得那條路開始變模糊。"}
+   ]},
+  {id:"yan", title:"嚴老師的雞湯（真的是雞）", text:"嚴振風把便當盒往你桌上一放：裡面是雞腿和米飯。「村中人能殺雞作食，為師偶爾也會。」",
+   choices:[
+     {label:"道謝並請教〈歸去來辭〉", eff:{si:5, likeMaster:8, stress:-6, vit:4}, t:"老師少見地放軟聲音：「辭官不是逃，是把腰桿伸直。」"},
+     {label:"狼吞虎嚥，順便訴苦", eff:{likeMaster:5, stress:-8, vit:6}, t:"老師哼了一聲：「吃完去跑步。訴苦也要有體力。」"}
+   ]},
+  {id:"cave", title:"山有小口", text:"社團倉庫後面有一扇半掩的舊門，縫裡彷彿有光。",
+   choices:[
+     {label:"捨下雜念，彎身進去看看", eff:{si:4, wen:3, explore:1}, t:"門後只是堆著舊課本的小房間，卻讓你忽然安靜下來。狹窄之後，好像亮了一點。"},
+     {label:"去告訴總務處，請他們上鎖", eff:{stress:2, flag:"mapped"}, t:"門被鎖上了。安全，但也再沒有那道縫裡的光。"}
+   ]},
+  {id:"bully", title:"石無道的嘲諷", text:"隔壁班的石無道在操場大聲說：「讀什麼桃花源？拳頭才是理想世界。」",
+   choices:[
+     {label:"約他週挑戰：用課文對決", eff:{vit:3, likeMaster:4, flag:"rival"}, t:"石無道愣了一下，隨即咧嘴：「行。答錯的人，加跑十圈。」"},
+     {label:"不理會，拉著同學去讀書", eff:{likePeer:5, stress:-3, wen:2}, t:"落英比了個讚。遠處的笑聲自己散了。"}
+   ]},
+  {id:"stress", title:"壓力如秦亂", text:"題目在眼前轉圈。你忽然不懂『無論』是更不用說，還是不管。心跳很快。",
+   choices:[
+     {label:"放下書，先散步休息", eff:{stress:-16, vit:4}, t:"溪邊吹了風。字義回去後就歸了位。"},
+     {label:"硬撐到背完", eff:{zi:3, stress:8, vit:-6}, t:"記住了幾條，但也更緊了。嚴老師路過，皺眉看了你一眼。"}
+   ]},
+  {id:"liuziji", title:"高尚士來訪", text:"一位升大學的學長來社團演講，神情清朗，不慕名利。高武陵說他外號「當代子驥」。",
+   choices:[
+     {label:"請教如何把隱逸精神放進現代生活", eff:{si:6, likeMaster:4, likePeer:3}, t:"學長想了想：「不一定要歸隱山林。把腰桿伸直，就是一種桃花源。」"},
+     {label:"要簽名、合照、打卡", eff:{likePeer:2, si:-1}, t:"學長還是簽了，只是笑得有點無奈。"}
+   ]},
+  {id:"sleep", title:"黃髮垂髫的夢", text:"你夢見平坦的田、整齊的屋舍，老人小孩都在笑。醒來時課本還攤在『怡然自樂』那一行。",
+   choices:[
+     {label:"把夢寫進札記", eff:{wen:4, si:3, stress:-5}, t:"夢還在，字也在。你忽然比較懂為什麼這不是仙境，而是人間。"},
+     {label:"翻個身再睡", eff:{stress:-10, vit:6}, t:"睡得很沉。體力回來了。"}
+   ]}
+];
+
+const ENDINGS = [
+  {id:"crash", name:"心力交瘁", badge:"未及問津", stamp:"且息",
+   cond:"多次崩潰或期末仍壓力爆表、體力見底",
+   text:"題目還在，人卻先散了。嚴老師沒有罵你，只把水放在桌上：「桃花源不是靠熬夜打出來的。先活著，再問津。」你這一次沒走到林子盡頭，但路還在。"},
+  {id:"lost", name:"迷路漁人", badge:"迷不復得路", stamp:"迷途",
+   cond:"學業不足，或把祕境路線告訴『太守』卻還沒把書讀通",
+   text:"你像那個漁人：進過美麗的林子，又急著做記號、急著稟報。回頭再找，山風只送來迷霧。嚴老師在期末評語寫下：『處處誌之，遂迷不復得路。先把心放平，再談理想。』"},
+  {id:"riceEnd", name:"五斗米折腰", badge:"腰已先折", stamp:"折腰",
+   cond:"大量打工賺錢，卻較少守住思辨與原則",
+   text:"錢包是厚了。可當課文讀到『不為五斗米折腰』，你忽然不太敢看嚴老師的眼睛。彭澤令只做了八十餘日；你為了時薪，把晨讀一次次讓了出去。錢能買雞腿，買不到那片豁然開朗。"},
+  {id:"lonely", name:"問津無人", badge:"孤身問路", stamp:"無津",
+   cond:"學業過得去，但與師父、同學好感都低，成了獨自走路的人",
+   text:"你把注釋背得很熟，教室卻像『遂與外人間隔』。沒有人問你從哪裡來，也沒有人延至其家。後遂無問津者——有時候，不是世界消失，是身邊沒有一起問的人。"},
+  {id:"scholar", name:"文言文學霸", badge:"武陵奪魁", stamp:"學霸",
+   cond:"文力、字力、譯力、思辨皆高，學業全面精熟",
+   text:"嚴老師把考卷拍在桌上，竟然笑了。「字也對，意也對，題解作者也講得清。這一拳，你打在點上——不，是打在課文上。」全班鬨笑。你在桃花源裡走了一趟，把人間淨土的樣子真正讀進骨子裡。"},
+  {id:"jingjie", name:"靖節傳人", badge:"高風亮節", stamp:"靖節",
+   cond:"思辨高、守住『不為五斗米折腰』，學業穩健，不過度打工",
+   text:"你沒有把理想賣成時薪。課文裡的靖節先生，不再只是注釋裡的諡號。嚴老師少見地鞠躬：「為師教鐵拳，你卻先把腰桿教給我看。」歸去來兮——不一定要辭官，也可以是把心安頓好。"},
+  {id:"fist", name:"鐵拳會長", badge:"拳文雙修", stamp:"會長",
+   cond:"體力高、挑戰多勝、師父好感高，學業也站得住",
+   text:"鐵拳社投票的那天，高武陵把隊旗塞進你手裡。嚴老師站在旁邊，大聲說：「會打的人很多；願意用正確答案出拳的人，不多。」你把課文和拳腳放在同一條路上，社裡的人跟著你跑，也跟著你讀。"},
+  {id:"hermit", name:"桃花源隱士", badge:"人間淨土", stamp:"隱逸",
+   cond:"思辨與探索皆高，不累積過多金錢，走近隱逸之路",
+   text:"你常在桃林裡走，把『忘路之遠近』活成一種本事。不必成仙，也不必告官。土地平曠、黃髮垂髫的畫面，在你心裡住了下來。有人問你理想世界在哪，你只指了指溪水：在能安身立命的日常裡。"},
+  {id:"ideal", name:"理想國實踐者", badge:"寄託有方", stamp:"理想",
+   cond:"思辨極高，能把寓意說清楚，並思考如何實踐",
+   text:"你在期末講堂上談『外在樣貌』與『內在精神』，又問：現在如何實踐心中的樂土？教室裡安靜了很久。陶淵明無力改變東晉末年，卻留下一個可想、可往的世界；你把它從課文裡接下來到此刻。"},
+  {id:"joy", name:"黃髮垂髫樂", badge:"怡然自樂", stamp:"怡然",
+   cond:"同學好感高、壓力管理得宜，學業穩定，日子過得像樂土",
+   text:"清溪、落英、武陵把你圍在桃樹下。沒有仙藥，也沒有夸張的奇蹟，只是筆記、汗水和笑聲。你忽然懂了：桃花源之所以動人，正因為它像一種可以共享的日常。並怡然自樂——原來可以不是典故，是下課鐘響。"},
+  {id:"ordinary", name:"武陵凡人", badge:"普通畢業", stamp:"結業",
+   cond:"未觸發特殊結局的穩健收場",
+   text:"你走完八週，既沒有成為傳說，也沒有迷路到站不起來。嚴老師在證書上蓋章：『武陵人，捕魚為業——普通，但誠實。』理想不一定一次找到；至少你知道林子在哪個方向。"}
+];
+
+const BOSSES = {
+  1:{name:"開筆小考卷", sub:"白紙黑字，當頭一拳", style:"#7c3a1d"},
+  2:{name:"字林小隊考", sub:"注釋關卡", style:"#9a3412"},
+  3:{name:"石無道", sub:"『讀書有什麼用？』", style:"#444"},
+  4:{name:"月考・豁然", sub:"從狹窄走向開朗", style:"#1e4d3b"},
+  5:{name:"許清溪（切磋）", sub:"溫柔，但題目不讓", style:"#1e3a5f"},
+  6:{name:"司馬權", sub:"學生會長的質詢", style:"#6b21a8"},
+  7:{name:"模擬考・尋誌", sub:"標記不一定找得到路", style:"#7f1d1d"},
+  8:{name:"期末・問津", sub:"理想是否可復得", style:"#1a1410"}
+};
+
+const TEACHER_SEC = [
+  {t:"學習重點（依課本）", b:`<p>認識「桃花源」的形象，體會作者藉以寄託追尋理想世界的寓意。</p>
+<p>課堂中可再對應：字詞與通假／一詞多義、敘事結構與虛實相生、題解與作者生平（五斗米、隱逸詩人之宗）、賞析中的主支線與「不具心機」、理想世界的思辨。</p>`},
+  {t:"這個遊戲是什麼？如何在課堂使用？", b:`<p>《鐵拳教育：桃花源養成計畫》把高一〈桃花源記〉做成八週（可改四週）養成遊戲。學生扮演「師父視角下的轉學生養成」：每週排出課表，課業活動是答題小遊戲，週末則是小考／挑戰戰——答對＝出拳、連擊、畫面震動。</p>
+<ul class="list-disc ml-5 mt-2 space-y-1">
+<li><b>單堂體驗（25–40 分）</b>：用教師區「快速模式」（4週），先示範第一週課表＋一場戰鬥，再讓學生開新檔自行跑完並截圖證書。</li>
+<li><b>兩至三堂單元</b>：標準八週。可規定每堂至少完成 2 週，並在「課文研讀」點注釋。期末請學生說明自己得到哪一個結局、與課文哪一句呼應。</li>
+<li><b>分站／平板</b>：單一 HTML，連網載入 Tailwind 與字型即可。建議使用平板或電腦，點按區域已加大。</li>
+<li><b>作業</b>：下載證書，並用三句話回答「問題與討論」第 1 或第 3 題。</li>
+</ul>
+<p class="mt-2">角色（嚴振風、林桃源／自訂、許清溪、方落英、高武陵、石無道、司馬權）皆為原創，避免使用影視劇照或演員姓名。</p>`},
+  {t:"養成機制與能力對應", b:`<ul class="list-disc ml-5 space-y-1">
+<li>晨讀課文 → 文力（情節、結構、人物）</li>
+<li>字詞特訓 → 字力（注釋、通假、一詞多義）</li>
+<li>翻譯道場 → 譯力（句意、省略成分）</li>
+<li>題解作者講堂 → 思辨（題解、生平、賞析、修辭、寓意、理想世界）</li>
+<li>鐵拳社練功／休息 → 體力與壓力（壓力過高會強制調整，多次崩潰影響結局）</li>
+<li>打工賺錢 → 金錢，但可能靠近「五斗米折腰」結局</li>
+<li>外出探索桃花林 → 隨機事件、同學／師父好感、關鍵選擇（守秘或告官、拒絕或接受高薪）</li>
+</ul>`},
+  {t:"問題與討論引導", b:`<p><b>一、外在樣貌與內在精神</b><br>外在：土地平曠、屋舍儼然、良田美池桑竹、阡陌交通、往來種作、衣著悉如外人。<br>內在：黃髮垂髫並怡然自樂、設酒殺雞的真誠好客、避秦時亂後的和平、不足為外人道的自足。提醒學生用課文原句印證。</p>
+<p class="mt-2"><b>二、虛實相生、為何不是仙境</b><br>實：年號太元、武陵／南陽、劉子驥見於《晉書・隱逸傳》、農耕飲食皆日常。<br>虛：可遇不可求、誌之卻迷路、後遂無問津者。<br>理念：要寄託的是人間可想的安樂社會，而非遙不可及的神仙世界（見賞析「並非想像中的仙鄉幻境」）。</p>
+<p class="mt-2"><b>三、現今能否實現／如何實踐</b><br>開放題。可從「安身立命」「與紛擾適度隔絕而不棄人間」「不具心機」等方向提問，避免標準答案化。</p>`},
+  {t:"自我評量參考答案（課本第1–11題）", b:`<ol class="list-decimal ml-6 space-y-1">
+<li>（B）「英」是花，不能換成「葉」。</li>
+<li>（A）兩處「不足」皆為「不值得」。</li>
+<li>（C）「餘人各復延③至其家」省略的賓語是漁人。</li>
+<li>（C）「你也五斗米，我也五斗米，樂陶陶」違背「不為五斗米折腰」之心志。</li>
+<li>（D）以農營生，衣食不虞匱乏。</li>
+<li>（A）長久避世離群，與外界脫節。</li>
+<li>（D）含蓄暗示漁人不要對外宣揚。</li>
+<li>（B）「漁人甚異之＝唯德行高潔者能到達」與文意相差最遠。</li>
+<li>（C）「說如此」並未描寫漁人在保密／洩密間掙扎，故此項手法說明為誤。</li>
+<li>（B）「黃髮垂髫，並怡然自樂」→家庭生活應落在高度滿意的一、二象限。</li>
+<li>（1）菊（2）竹（3）梅（4）桃（5）柳（6）松（7）荷</li>
+</ol>`},
+  {t:"題庫說明", b:`<p>遊戲內建 91 題選擇題，含課本自我評量原題（改寫為課堂可用的單選／填植物）以及依課文、注釋、題解、作者、賞析、知識＋、問題與討論延伸的高一程度題，涵蓋修辭、寫作手法、寓意與理想世界思辨，不只字義。每題附解析與出處。同一局會優先避開已做過的題。</p>`}
+];
+
+
+/* ========== 工具、音效、畫面切換（一律用 style.display） ========== */
+const $ = (id) => document.getElementById(id);
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s => { s.classList.remove("on"); s.style.display = "none"; });
+  const el = $(id);
+  el.classList.add("on");
+  el.style.display = "flex";
+  window.scrollTo(0,0);
+  const hideTop = (id==="screen-title"||id==="screen-create"||((id==="screen-book"||id==="screen-teacher")&&!S));
+  $("topbar").style.display = hideTop ? "none" : "block";
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.classList.remove("on");t.style.display="none";},1800); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+let audioCtx=null, muted=false;
+function ensureAudio(){ if(!audioCtx){ const A=window.AudioContext||window.webkitAudioContext; if(A) audioCtx=new A(); } if(audioCtx && audioCtx.state==="suspended") audioCtx.resume(); }
+function beep(freq, dur, type="square", vol=0.05, delay=0){
+  if(muted||!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=type; o.frequency.value=freq; g.gain.value=vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t=audioCtx.currentTime+delay;
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function sfxCorrect(){ beep(523,0.08,"square",0.05); beep(784,0.12,"square",0.05,0.07); }
+function sfxWrong(){ beep(180,0.18,"sawtooth",0.06); }
+function sfxPunch(){ beep(90,0.12,"sawtooth",0.07); beep(220,0.08,"square",0.04,0.04); }
+function sfxCombo(){ beep(659,0.07,"square",0.05); beep(880,0.1,"square",0.05,0.06); beep(1174,0.14,"square",0.05,0.12); }
+function sfxOk(){ beep(440,0.1,"triangle",0.04); }
+
+/* ========== 狀態 ========== */
+let S=null, lookSel="ink", fromScreen="screen-title", pendingQuick=false;
+function freshState(quick){
+  const look=LOOKS.find(l=>l.id===lookSel)||LOOKS[0];
+  return {
+    name: $("in-name").value.trim(),
+    school: $("in-school").value.trim(),
+    klass: $("in-class").value.trim(),
+    seat: $("in-seat").value.trim(),
+    look: look.id,
+    week:1, slots:[], usedQ:[],
+    maxWeek: quick?TOTAL_WEEKS_QUICK:TOTAL_WEEKS_STD,
+    quick:!!quick,
+    stats:{wen:22, zi:22, yi:22, si:22, vit:72, stress:18, money:50, likeMaster:20, likePeer:20},
+    flags:{refuseRice:false, tookRice:false, leaked:false, keptSecret:false, mapped:false, rival:false},
+    counters:{explore:0, work:0, rest:0, train:0, study:0, breakdowns:0, wins:0, losses:0, quizOk:0, quizAll:0, comboBest:0},
+    log:[]
+  };
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); toast("已存檔"); }catch(e){ toast("存檔失敗"); } }
+function load(){ try{ const x=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return x&&x.name?x:null; }catch(e){ return null; } }
+
+function studyAvg(){ const s=S.stats; return (s.wen+s.zi+s.yi+s.si)/4; }
+function addStat(k,v){
+  if(k==="money") S.stats.money=Math.max(0, Math.round(S.stats.money+v));
+  else if(S.stats[k]!=null) S.stats[k]=clamp(Math.round(S.stats[k]+v),0,100);
+}
+function applyEff(eff){
+  if(!eff) return;
+  Object.keys(eff).forEach(k=>{
+    if(k==="flag") S.flags[eff.flag]=true;
+    else if(k==="explore") S.counters.explore+=eff[k];
+    else addStat(k, eff[k]);
+  });
+}
+
+/* ========== 角色繪圖（原創 SVG，無版權圖像） ========== */
+function avatarSVG(opt){
+  const hair=opt.hair||"#1a1410", acc=opt.accent||"#7f1d1d", pose=opt.pose||"idle", size=opt.size||120;
+  const fist = pose==="punch" ? `<g transform="translate(78,70) rotate(-20)"><rect x="0" y="0" width="22" height="16" rx="6" fill="#f1c7a8"/><rect x="14" y="-6" width="12" height="20" rx="5" fill="#f1c7a8"/></g>` : "";
+  const brow = opt.stern ? `<path d="M40 52 L52 50" stroke="#1a1410" stroke-width="2"/><path d="M68 50 L80 52" stroke="#1a1410" stroke-width="2"/>` : "";
+  return `<svg class="avatar-svg" width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="60" r="56" fill="#f3e6d0" stroke="#d7c4a5" stroke-width="2"/>
+    <ellipse cx="60" cy="92" rx="28" ry="16" fill="${acc}"/>
+    <rect x="38" y="78" width="44" height="28" fill="${acc}"/>
+    <rect x="38" y="78" width="44" height="6" fill="#f6eedf"/>
+    <circle cx="60" cy="58" r="22" fill="#f1c7a8"/>
+    <path d="M38 54 Q60 28 82 54 L80 48 Q60 22 40 48 Z" fill="${hair}"/>
+    <circle cx="52" cy="58" r="2.2" fill="#1a1410"/><circle cx="70" cy="58" r="2.2" fill="#1a1410"/>
+    ${brow}
+    <path d="M54 68 Q60 72 66 68" fill="none" stroke="#1a1410" stroke-width="1.5" stroke-linecap="round"/>
+    ${fist}
+  </svg>`;
+}
+function lookOf(){ return LOOKS.find(l=>l.id===(S&&S.look||lookSel))||LOOKS[0]; }
+function studentArt(pose,size){ return avatarSVG({...lookOf(), pose, size, stern:false}); }
+function teacherArt(size){ return avatarSVG({hair:"#1a1410", accent:"#7f1d1d", pose:"punch", size, stern:true}); }
+function enemyArt(color,size){ return avatarSVG({hair:"#2a2a2a", accent:color||"#444", pose:"idle", size, stern:true}); }
+
+/* ========== 題庫抽取 ========== */
+function takeQuestions(cat, n){
+  const used=new Set(S.usedQ);
+  let pool=QUESTIONS.filter(q=>!cat||q.cat===cat).filter(q=>!used.has(q._id));
+  if(pool.length<n) pool=QUESTIONS.filter(q=>!cat||q.cat===cat);
+  if(pool.length<n) pool=QUESTIONS.filter(q=>!used.has(q._id));
+  if(pool.length<n) pool=QUESTIONS.slice();
+  const picked=shuffle(pool).slice(0,n);
+  picked.forEach(q=>S.usedQ.push(q._id));
+  return picked.map(q=>{
+    const order=shuffle(q.opts.map((_,i)=>i));
+    return {q:q.q, explain:q.explain, source:q.source, cat:q.cat, opts:order.map(i=>q.opts[i]), ans:order.indexOf(q.ans)};
+  });
+}
+
+/* ========== 頂欄／儀表板 ========== */
+function renderStats(el){
+  const s=S.stats, rows=[
+    ["wen","文力",s.wen],["zi","字力",s.zi],["yi","譯力",s.yi],["si","思辨",s.si],
+    ["vit","體力",s.vit],["stress","壓力",s.stress],["like","師父好感",s.likeMaster],["like","同學好感",s.likePeer]
+  ];
+  el.innerHTML=rows.map(([k,name,v])=>`<div class="stat-row"><span class="font-ui w-20">${name}</span>
+    <div class="stat-bar bar-${k}"><i style="width:${v}%"></i></div><span class="font-ui w-8 text-right">${v}</span></div>`).join("");
+}
+function renderHub(){
+  const w=weekMeta();
+  $("tb-week").textContent=`${weekZH(S.week)}／共${S.maxWeek}週　${w.title}`;
+  $("tb-name").textContent=S.name;
+  $("hub-week-title").textContent=`${weekZH(S.week)}　${w.title}`;
+  $("hub-flavor").textContent=w.flavor;
+  $("hub-student").textContent=`${S.klass?S.klass+"　":""}${S.name}`;
+  $("hub-money").textContent=S.stats.money;
+  $("hub-avatar").innerHTML=studentArt("idle",110);
+  renderStats($("hub-stats"));
+  $("hub-slots").innerHTML=[0,1,2].map(i=>{
+    const id=S.slots[i], a=ACTS.find(x=>x.id===id);
+    return `<div class="slot-box ${a?"filled":""} p-2 text-center font-ui text-sm" data-slot="${i}">
+      <div class="text-xs text-stone-500">${["上午","下午","晚間"][i]}</div>
+      <div>${a?a.icon+" "+a.name:"（點選下方活動）"}</div></div>`;
+  }).join("");
+  $("hub-slots").querySelectorAll("[data-slot]").forEach(el=>{
+    el.onclick=()=>{ S.slots[el.dataset.slot]=null; S.slots=S.slots.map(x=>x||null); renderHub(); };
+  });
+  $("act-grid").innerHTML=ACTS.map(a=>`<button type="button" class="card-paper act-card p-4 text-left ${S.slots.includes(a.id)?"picked":""}" data-act="${a.id}">
+    <div class="flex items-center gap-2"><span class="font-display text-3xl text-rose-800">${a.icon}</span>
+    <div><div class="font-ui font-bold">${a.name}</div><div class="text-xs text-stone-500">${a.cat?("提升"+CAT_NAME[a.cat]):"調整狀態／事件"}</div></div></div>
+    <p class="text-sm text-stone-600 mt-2">${a.blurb}</p></button>`).join("");
+  $("act-grid").querySelectorAll("[data-act]").forEach(el=>{
+    el.onclick=()=>{
+      const i=S.slots.findIndex(x=>!x);
+      if(i<0){ toast("三個時段都滿了，可點時段清空"); return; }
+      S.slots[i]=el.dataset.act; sfxOk(); renderHub();
+    };
+  });
+}
+function weekZH(n){ return "第" + "一二三四五六七八"[n-1] + "週"; }
+function weekMeta(){
+  const src = S.quick ? [WEEKS[0],WEEKS[3],WEEKS[5],WEEKS[7]] : WEEKS;
+  return src[S.week-1]||WEEKS[0];
+}
+function bossMeta(){
+  const w=weekMeta();
+  return BOSSES[w.n];
+}
+
+/* ========== 開週流程 ========== */
+let queue=[], qPlan=null, qIdx=0, qList=[], actCur=null;
+
+function startWeek(){
+  if(S.slots.filter(Boolean).length<3){ toast("請先排滿三個時段"); return; }
+  if(S.stats.stress>=92){ forcedBreakdown(); return; }
+  queue=S.slots.filter(Boolean).slice();
+  runNextSlot();
+}
+function runNextSlot(){
+  if(!queue.length){ maybeRandomEvent(()=>startBattle()); return; }
+  const id=queue.shift();
+  actCur=ACTS.find(a=>a.id===id);
+  if(actCur.cat){ startQuiz(actCur); }
+  else { startSoft(actCur); }
+}
+function startQuiz(act){
+  qList=takeQuestions(act.cat,3); qIdx=0;
+  showScreen("screen-activity");
+  $("act-kicker").textContent=`${weekZH(S.week)}　${["上午","下午","晚間"][3-queue.length-1]||"修煉"}`;
+  $("act-title").textContent=act.name;
+  $("act-lead").textContent=act.detail;
+  renderQuizQ();
+}
+function renderQuizQ(){
+  const item=qList[qIdx];
+  $("act-progress").textContent=`${qIdx+1}／${qList.length}`;
+  $("act-qbox").innerHTML=`<p class="text-lg font-bold leading-relaxed">${item.q}</p>
+    <div class="mt-3 space-y-2" id="quiz-opts"></div>
+    <p id="quiz-explain" class="mt-3 text-sm leading-relaxed" style="display:none"></p>
+    <button type="button" id="btn-quiz-next" class="btn-peach font-ui px-5 py-2 mt-4" style="display:none">下一題</button>`;
+  const box=$("quiz-opts");
+  item.opts.forEach((t,i)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="opt-btn";
+    b.textContent=["甲　","乙　","丙　","丁　"][i]+t;
+    b.onclick=()=>answerQuiz(i,b);
+    box.appendChild(b);
+  });
+}
+function answerQuiz(i,btn){
+  const item=qList[qIdx];
+  $("act-qbox").querySelectorAll(".opt-btn").forEach(b=>b.disabled=true);
+  const ok=i===item.ans;
+  btn.classList.add(ok?"good":"bad");
+  $("act-qbox").querySelectorAll(".opt-btn")[item.ans].classList.add("good");
+  S.counters.quizAll++; if(ok) S.counters.quizOk++;
+  if(ok){ sfxCorrect(); addStat(actCur.cat, 3); }
+  else { sfxWrong(); addStat(actCur.cat, 1); }
+  const ex=$("quiz-explain");
+  ex.style.display="block";
+  ex.innerHTML=`<b>${ok?"答對了。":"再看一次。"}</b> ${item.explain}<span class="text-stone-500">（${item.source}）</span>`;
+  const nbtn=$("btn-quiz-next"); nbtn.style.display="inline-block";
+  nbtn.textContent = qIdx<item.opts? (qIdx+1<qList.length?"下一題":"完成本時段"):"下一題";
+  nbtn.onclick=()=>{
+    qIdx++;
+    if(qIdx<qList.length) renderQuizQ();
+    else { finishStudyAct(); runNextSlot(); }
+  };
+}
+function finishStudyAct(){
+  S.counters.study++;
+  addStat(actCur.cat, 6);
+  addStat("stress", 6);
+  addStat("vit", -3);
+  if(actCur.id==="lecture") addStat("likeMaster", 4);
+  checkStressSoft();
+}
+function startSoft(act){
+  showScreen("screen-activity");
+  $("act-kicker").textContent=weekZH(S.week);
+  $("act-title").textContent=act.name;
+  $("act-lead").textContent=act.detail;
+  $("act-progress").textContent="";
+  let extra="";
+  if(act.id==="explore"){
+    // go directly to event from explore pool
+    const ev=pick(EVENTS);
+    $("act-qbox").innerHTML=`<p class="text-stone-600">你走出校園，朝桃花林的方向去。</p>
+      <button type="button" class="btn-peach font-ui px-5 py-2 mt-4" id="btn-go-ev">繼續</button>`;
+    $("btn-go-ev").onclick=()=>{ S.counters.explore++; openEvent(ev, ()=>runNextSlot()); };
+    return;
+  }
+  if(act.id==="train"){ addStat("vit",14); addStat("stress",-10); addStat("likeMaster",6); addStat("wen",1); S.counters.train++; extra="沙袋砰砰作響。嚴老師點頭：「力從心來，文也是。」"; }
+  if(act.id==="work"){
+    if(S.stats.vit<22){ extra="你太累了，店長請你回去休息，這次沒賺到錢。"; addStat("stress",4); }
+    else { addStat("money",28); addStat("vit",-10); addStat("stress",8); S.counters.work++; extra="收銀機響了。口袋裡多了二十八文，肩卻沉了一點。"; }
+  }
+  if(act.id==="rest"){ addStat("stress",-20); addStat("vit",12); S.counters.rest++; extra="你睡到自然醒。窗邊有一片花瓣。"; }
+  $("act-qbox").innerHTML=`<div class="story-scroll">${extra}</div>
+    <p class="text-sm text-stone-500 mt-3 font-ui">體力 ${S.stats.vit}　壓力 ${S.stats.stress}　金錢 ${S.stats.money}</p>
+    <button type="button" class="btn-peach font-ui px-5 py-2 mt-4" id="btn-soft-next">繼續</button>`;
+  $("btn-soft-next").onclick=()=>runNextSlot();
+}
+function maybeRandomEvent(cb){
+  if(Math.random()<0.72){ openEvent(pick(EVENTS), cb); }
+  else cb();
+}
+function openEvent(ev, cb){
+  $("lb-title").textContent=ev.title;
+  $("lb-body").innerHTML=`<p>${ev.text}</p>`;
+  $("lb-actions").innerHTML="";
+  ev.choices.forEach(ch=>{
+    const b=document.createElement("button"); b.type="button"; b.className="btn-peach font-ui px-4 py-2";
+    b.textContent=ch.label;
+    b.onclick=()=>{
+      applyEff(ch.eff);
+      $("lb-body").innerHTML=`<p>${ch.t}</p>`;
+      $("lb-actions").innerHTML="";
+      const ok=document.createElement("button"); ok.type="button"; ok.className="btn-ink font-ui text-white px-4 py-2";
+      ok.textContent="繼續"; ok.onclick=()=>{ closeLB(); cb&&cb(); };
+      $("lb-actions").appendChild(ok);
+    };
+    $("lb-actions").appendChild(b);
+  });
+  openLB();
+}
+function openLB(){ $("lightbox").classList.add("on"); $("lightbox").style.display="flex"; }
+function closeLB(){ $("lightbox").classList.remove("on"); $("lightbox").style.display="none"; $("lb-actions").innerHTML=""; }
+
+function forcedBreakdown(){
+  S.counters.breakdowns++;
+  S.stats.stress=55; addStat("vit",-8); addStat("wen",-2); addStat("zi",-2);
+  $("lb-title").textContent="壓力如秦亂";
+  $("lb-body").innerHTML=`<p>這一週你幾乎要撐不住了。嚴老師沒收課表，強制休息：「理想世界不是用熬出來的。先讓自己活得像『怡然自樂』，再談課文。」</p><p class="mt-2 text-sm text-stone-500">壓力被強制降下，但體力與部分文力受到影響。（崩潰次數：${S.counters.breakdowns}）</p>`;
+  $("lb-actions").innerHTML="";
+  const b=document.createElement("button"); b.type="button"; b.className="btn-peach font-ui px-4 py-2";
+  b.textContent="先休息，再排課表"; b.onclick=()=>{ closeLB(); S.slots=[null,null,null]; renderHub(); showScreen("screen-hub"); };
+  $("lb-actions").appendChild(b); openLB();
+}
+function checkStressSoft(){
+  if(S.stats.stress>=88){ addStat("vit",-4); toast("壓力偏高，體力下滑了"); }
+}
+
+/* ========== 戰鬥 ========== */
+let B=null;
+function startBattle(){
+  const boss=bossMeta();
+  const avg=studyAvg();
+  const pHP=Math.round(86 + S.stats.vit*0.45 + avg*0.2);
+  const eHP=Math.round(78 + S.week*6 + (S.quick?8:0));
+  const nQ = (weekMeta().n===8?6:5);
+  B={ boss, pHP, pMax:pHP, eHP, eMax:eHP, combo:0, i:0, list:takeQuestions(null,nQ), over:false };
+  showScreen("screen-battle");
+  $("b-p-name").textContent=S.name;
+  $("b-e-name").textContent=boss.name;
+  $("b-p-label").textContent="鐵拳社轉學生";
+  $("b-e-label").textContent=boss.sub;
+  $("b-p-art").innerHTML=studentArt("punch",130);
+  $("b-e-art").innerHTML=enemyArt(boss.style,130);
+  renderBattleQ();
+}
+function renderBattleQ(){
+  if(B.over) return;
+  $("b-p-hp").style.width=(B.pHP/B.pMax*100)+"%";
+  $("b-e-hp").style.width=(B.eHP/B.eMax*100)+"%";
+  $("b-combo").textContent="COMBO "+B.combo;
+  $("b-round").textContent=`第 ${B.i+1}／${B.list.length} 招`;
+  const item=B.list[B.i];
+  $("b-q").textContent=item.q;
+  $("b-explain").style.display="none";
+  const box=$("b-opts"); box.innerHTML="";
+  item.opts.forEach((t,i)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="opt-btn";
+    b.textContent=["甲　","乙　","丙　","丁　"][i]+t;
+    b.onclick=()=>answerBattle(i);
+    box.appendChild(b);
+  });
+}
+function answerBattle(i){
+  if(B.over) return;
+  const item=B.list[B.i];
+  $("b-opts").querySelectorAll(".opt-btn").forEach(b=>b.disabled=true);
+  $("b-opts").querySelectorAll(".opt-btn")[item.ans].classList.add("good");
+  const ok=i===item.ans;
+  if(!ok) $("b-opts").querySelectorAll(".opt-btn")[i].classList.add("bad");
+  S.counters.quizAll++;
+  const stage=$("battle-stage");
+  if(ok){
+    S.counters.quizOk++; B.combo++; S.counters.comboBest=Math.max(S.counters.comboBest,B.combo);
+    const dmg=Math.round(16 + B.combo*6 + studyAvg()*0.12 + (item.cat? (S.stats[item.cat]||0)*0.08:0));
+    B.eHP=Math.max(0,B.eHP-dmg);
+    $("b-combo").classList.remove("combo-pop"); void $("b-combo").offsetWidth; $("b-combo").classList.add("combo-pop");
+    $("b-combo").textContent="COMBO "+B.combo;
+    const fx=$("punch-fx"); fx.classList.add("on"); fx.style.display="flex";
+    setTimeout(()=>{ fx.classList.remove("on"); fx.style.display="none"; }, 450);
+    stage.classList.add(B.combo>=3?"shake-hard":"shake"); stage.classList.add("flash-ok");
+    setTimeout(()=>stage.classList.remove("shake","shake-hard","flash-ok"), 420);
+    if(B.combo>=3) sfxCombo(); else sfxPunch();
+    $("b-explain").innerHTML=`<b>命中！傷害 ${dmg}。</b> ${item.explain}<span class="text-stone-500">（${item.source}）</span>`;
+  }else{
+    B.combo=0;
+    const dmg=Math.round(14 + S.week*2 + (S.stats.stress>70?4:0));
+    B.pHP=Math.max(0,B.pHP-dmg);
+    sfxWrong();
+    stage.classList.add("shake");
+    setTimeout(()=>stage.classList.remove("shake"), 350);
+    $("b-explain").innerHTML=`<b>被打回來了（－${dmg}）。</b> ${item.explain}<span class="text-stone-500">（${item.source}）</span>`;
+  }
+  $("b-p-hp").style.width=(B.pHP/B.pMax*100)+"%";
+  $("b-e-hp").style.width=(B.eHP/B.eMax*100)+"%";
+  $("b-explain").style.display="block";
+  const nxt=document.createElement("button"); nxt.type="button"; nxt.className="btn-peach font-ui px-5 py-2 mt-3";
+  const ended=B.eHP<=0||B.pHP<=0||B.i>=B.list.length-1;
+  nxt.textContent=ended?"看結果":"下一招";
+  nxt.onclick=()=>{
+    if(B.eHP<=0||B.pHP<=0||B.i>=B.list.length-1) finishBattle();
+    else { B.i++; renderBattleQ(); }
+  };
+  $("b-explain").appendChild(document.createElement("br"));
+  $("b-explain").appendChild(nxt);
+}
+function finishBattle(){
+  B.over=true;
+  const win=B.eHP<=0 || (B.pHP>0 && B.eHP<B.pHP);
+  if(win){ S.counters.wins++; addStat("likeMaster",4); addStat("money",8); addStat("vit",-4); addStat("stress",-3); }
+  else { S.counters.losses++; addStat("stress",8); addStat("vit",-8); addStat("likeMaster",1); }
+  showScreen("screen-week");
+  const w=weekMeta();
+  $("week-sum-title").textContent=`${weekZH(S.week)}　${w.title}　${win?"勝":"苦戰"}`;
+  $("week-sum-body").innerHTML=`
+    <p>${win?"正確的答案化成拳頭，對手撐不住了。":"這一回沒打完，嚴老師只說：「再練。迷路不可怕，停在原地才可惜。」"}</p>
+    <p class="font-ui text-sm">戰績 ${S.counters.wins} 勝 ${S.counters.losses} 負　累計答對 ${S.counters.quizOk}／${S.counters.quizAll}　最高連擊 ${S.counters.comboBest}</p>
+    <div id="week-stats" class="mt-3"></div>`;
+  renderStats($("week-stats"));
+  $("btn-week-next").textContent = S.week>=S.maxWeek ? "觀看結局" : "進入下一週";
+  $("btn-week-next").onclick=()=>{
+    if(S.week>=S.maxWeek){ finishGame(); }
+    else { S.week++; S.slots=[null,null,null]; saveQuiet(); renderHub(); showScreen("screen-hub"); }
+  };
+}
+function saveQuiet(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ========== 結局與證書 ========== */
+function chooseEnding(){
+  const s=S.stats, c=S.counters, f=S.flags, avg=studyAvg();
+  if(c.breakdowns>=3 || (s.stress>=90 && s.vit<=18)) return ENDINGS.find(e=>e.id==="crash");
+  if(f.leaked && avg<70) return ENDINGS.find(e=>e.id==="lost");
+  if(avg<42) return ENDINGS.find(e=>e.id==="lost");
+  if(s.money>=180 && c.work>=5 && s.si<60 && !f.refuseRice) return ENDINGS.find(e=>e.id==="riceEnd");
+  if(avg>=40 && s.likeMaster<25 && s.likePeer<25) return ENDINGS.find(e=>e.id==="lonely");
+  if(s.wen>=78 && s.zi>=78 && s.yi>=75 && s.si>=75 && avg>=78) return ENDINGS.find(e=>e.id==="scholar");
+  if(s.si>=72 && f.refuseRice && c.work<=3 && avg>=62) return ENDINGS.find(e=>e.id==="jingjie");
+  if(s.vit>=78 && c.wins>=Math.max(3, S.maxWeek-2) && s.likeMaster>=68 && avg>=50) return ENDINGS.find(e=>e.id==="fist");
+  if(s.si>=78 && c.explore>=5 && s.money<=90 && avg>=52) return ENDINGS.find(e=>e.id==="hermit");
+  if(s.si>=85 && s.wen>=68) return ENDINGS.find(e=>e.id==="ideal");
+  if(s.likePeer>=75 && s.stress<=45 && avg>=50) return ENDINGS.find(e=>e.id==="joy");
+  return ENDINGS.find(e=>e.id==="ordinary");
+}
+function finishGame(){
+  const end=chooseEnding(); S.ending=end.id; saveQuiet();
+  showScreen("screen-ending");
+  $("end-kicker").textContent="結局　"+end.badge;
+  $("end-title").textContent=end.name;
+  $("end-art").innerHTML=studentArt("idle",140);
+  $("end-body").innerHTML=`<p>${end.text.replace(S.name?"":"", "")}</p>
+    <p class="mt-3 text-sm text-stone-500 font-ui">文力${S.stats.wen}　字力${S.stats.zi}　譯力${S.stats.yi}　思辨${S.stats.si}　體力${S.stats.vit}　壓力${S.stats.stress}<br>師父好感${S.stats.likeMaster}　同學好感${S.stats.likePeer}　金錢${S.stats.money}　勝負${S.counters.wins}－${S.counters.losses}</p>`;
+}
+function fillCert(){
+  const end=ENDINGS.find(e=>e.id===S.ending)||chooseEnding();
+  const school=S.school||"桃源高級中學";
+  const when=new Date();
+  const date=`${when.getFullYear()}年${when.getMonth()+1}月${when.getDate()}日`;
+  $("cert-header").textContent=(school?school+"　":"")+"鐵拳社 × 國文科教學遊戲";
+  $("cert-sub").textContent="《鐵拳教育：桃花源養成計畫》";
+  $("cert-text").innerHTML=`茲證明　<b>${school}</b>　<b>${S.klass||""}</b>　座號 <b>${S.seat||"—"}</b><br>
+    學生　<span class="font-display text-3xl">${S.name}</span><br>
+    已完成本課養成修煉，獲結局「<b>${end.name}</b>」（${end.badge}）。<br>
+    答對 ${S.counters.quizOk}／${S.counters.quizAll} 題，最高連擊 ${S.counters.comboBest}，戰績 ${S.counters.wins} 勝。`;
+  $("cert-stats").innerHTML=["文力 "+S.stats.wen,"字力 "+S.stats.zi,"譯力 "+S.stats.yi,"思辨 "+S.stats.si,"體力 "+S.stats.vit,"壓力 "+S.stats.stress,"師父好感 "+S.stats.likeMaster,"同學好感 "+S.stats.likePeer].map(t=>`<div>${t}</div>`).join("");
+  $("cert-meta").innerHTML=`${date}<br>指導：嚴振風老師　鐵拳社<br>教材：高一國文〈桃花源記〉`;
+  $("cert-stamp").innerHTML=end.stamp.replace(/(.{2})/,"$1<br>");
+}
+function downloadCert(){
+  const end=ENDINGS.find(e=>e.id===S.ending)||chooseEnding();
+  const c=document.createElement("canvas"); c.width=1600; c.height=1180;
+  const ctx=c.getContext("2d");
+  ctx.fillStyle="#7f1d1d"; ctx.fillRect(0,0,1600,1180);
+  ctx.fillStyle="#c9a227"; ctx.fillRect(18,18,1564,1144);
+  ctx.fillStyle="#fffaf0"; ctx.fillRect(32,32,1536,1116);
+  ctx.strokeStyle="#c9a227"; ctx.lineWidth=2; ctx.strokeRect(52,52,1496,1076);
+  // petals
+  ctx.globalAlpha=.25; for(let i=0;i<18;i++){ ctx.fillStyle="#e45b4a"; ctx.beginPath(); ctx.ellipse(120+i*80, 90+(i%3)*30, 10,14, i,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1;
+  ctx.fillStyle="#7a5a3a"; ctx.font="24px 'Noto Sans TC',sans-serif"; ctx.textAlign="center";
+  ctx.fillText((S.school||"桃源高級中學")+"　鐵拳社 × 國文科教學遊戲", 800, 130);
+  ctx.fillStyle="#9f1239"; ctx.font="72px 'Ma Shan Zheng','Noto Serif TC',serif"; ctx.fillText("結業證書",800,230);
+  ctx.fillStyle="#3a2e26"; ctx.font="36px 'Ma Shan Zheng','Noto Serif TC',serif"; ctx.fillText("《鐵拳教育：桃花源養成計畫》",800,300);
+  ctx.textAlign="left"; ctx.font="30px 'Noto Serif TC',serif"; ctx.fillStyle="#1a1410";
+  const lines=[
+    `茲證明  ${S.school||"桃源高級中學"}  ${S.klass||""}  座號 ${S.seat||"—"}`,
+    `學生  ${S.name}  已完成本課養成修煉，`,
+    `獲結局「${end.name}」（${end.badge}）。`,
+    `答對 ${S.counters.quizOk}／${S.counters.quizAll} 題，最高連擊 ${S.counters.comboBest}，戰績 ${S.counters.wins} 勝。`,
+    "",
+    `文力 ${S.stats.wen}    字力 ${S.stats.zi}    譯力 ${S.stats.yi}    思辨 ${S.stats.si}`,
+    `體力 ${S.stats.vit}    壓力 ${S.stats.stress}    師父好感 ${S.stats.likeMaster}    同學好感 ${S.stats.likePeer}`
+  ];
+  lines.forEach((t,i)=>ctx.fillText(t, 180, 390+i*58));
+  const now=new Date();
+  ctx.font="26px 'Noto Sans TC',sans-serif";
+  ctx.fillText(`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`, 180, 980);
+  ctx.fillText("指導：嚴振風老師　教材：高一國文〈桃花源記〉", 180, 1030);
+  // stamp
+  ctx.save(); ctx.translate(1280,960); ctx.rotate(-0.18);
+  ctx.strokeStyle="#b91c1c"; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle="#b91c1c"; ctx.font="40px 'Ma Shan Zheng','Noto Serif TC',serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText(end.stamp,0,0); ctx.restore();
+  const a=document.createElement("a"); a.download=`桃花源養成_證書_${S.name}.png`; a.href=c.toDataURL("image/png"); a.click();
+}
+
+/* ========== 課文研讀／教師區 ========== */
+function openBook(from){ fromScreen=from||"screen-title"; renderBook("lesson"); showScreen("screen-book"); }
+function renderBook(tab){
+  const tabs=[["lesson","課文與注釋"],["jieti","題解"],["author","作者"],["shangxi","賞析"],["knowledge","知識＋"],["discuss","問題與討論"]];
+  $("book-tabs").innerHTML=tabs.map(([id,name])=>`<button type="button" class="px-3 py-1 rounded-full ${tab===id?"bg-rose-800 text-white":"bg-stone-200"}" data-tab="${id}">${name}</button>`).join("");
+  $("book-tabs").querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>renderBook(b.dataset.tab));
+  if(tab==="lesson") $("book-body").innerHTML=`<p class="font-ui text-sm text-stone-500">${TEXT.title}　學習重點：${TEXT.goals}</p>`+TEXT.lesson;
+  else $("book-body").innerHTML=TEXT[tab];
+  $("book-body").querySelectorAll(".note-link").forEach(el=>{
+    el.onclick=()=>{ const n=NOTES[el.dataset.n]; if(!n) return;
+      $("lb-title").innerHTML=`<span class="font-ui text-xl">注釋 ${el.dataset.n}</span>　${n[0]}`;
+      $("lb-body").innerHTML=`<p>${n[1]}</p>`; $("lb-actions").innerHTML=""; openLB(); };
+  });
+}
+function openTeacher(from){ fromScreen=from||"screen-title";
+  $("teacher-acc").innerHTML=TEACHER_SEC.map((x,i)=>`<div class="acc-item"><button type="button" class="acc-btn" data-acc="${i}">${x.t}</button><div class="acc-body" id="acc-${i}">${x.b}</div></div>`).join("");
+  $("teacher-acc").querySelectorAll(".acc-btn").forEach(btn=>{
+    btn.onclick=()=>{ const body=$("acc-"+btn.dataset.acc); const open=body.style.display==="block"; body.style.display=open?"none":"block"; body.classList.toggle("open",!open); };
+  });
+  showScreen("screen-teacher");
+}
+
+/* ========== 開場／綁定 ========== */
+function spawnPetals(){
+  const box=$("petals"); box.innerHTML="";
+  for(let i=0;i<14;i++){
+    const d=document.createElement("div"); d.className="petal";
+    d.style.left=(Math.random()*100)+"%"; d.style.animationDuration=(9+Math.random()*10)+"s";
+    d.style.animationDelay=(Math.random()*8)+"s"; d.style.transform=`scale(${0.7+Math.random()*0.8})`;
+    box.appendChild(d);
+  }
+}
+function renderLooks(){
+  $("look-picks").innerHTML=LOOKS.map(l=>`<button type="button" class="card-paper p-3 text-center font-ui ${lookSel===l.id?"picked":""}" data-look="${l.id}">
+    ${avatarSVG({hair:l.hair,accent:l.accent,size:96})}<div class="mt-1">${l.name}</div></button>`).join("");
+  $("look-picks").querySelectorAll("[data-look]").forEach(b=>b.onclick=()=>{ lookSel=b.dataset.look; renderLooks(); });
+}
+function goCreate(quick){ pendingQuick=!!quick; renderLooks(); showScreen("screen-create"); }
+function startNew(){
+  const name=$("in-name").value.trim();
+  if(!name){ toast("請先填學生姓名"); return; }
+  S=freshState(pendingQuick);
+  const story=`桃源高中的三月，後山溪邊開始落花。<b>嚴振風</b>老師——學生私下叫他「嚴拳」——把一份轉學資料拍在桌上。<br><br>
+    「${S.name}，聽說你拳頭很硬。很好。不過在我的教室，<b>答對才算出拳</b>。這一學期我們讀陶淵明〈桃花源記〉：漁人怎麼進去，又為什麼出不來；五斗米為什麼不能折腰；理想世界為什麼會失落。」<br><br>
+    他舉起兩根手指：「${S.maxWeek}週。每週你自己排課表——晨讀、字詞、翻譯、題解作者、練功、打工、休息，或到桃花林走走。週末有小考或挑戰。壓力太高會先倒下，這不是遊戲外掛，是身體在講話。」<br><br>
+    窗外一片花瓣貼上玻璃。嚴老師補了一句：「角色都是咱們自己的人。課文得照課本來，一個字都不能滑過去。現在，走進教室。」`;
+  $("story-body").innerHTML=story;
+  showScreen("screen-story");
+}
+function enterHub(){ S.slots=[null,null,null]; renderHub(); showScreen("screen-hub"); saveQuiet(); }
+
+function bind(){
+  $("btn-newgame").onclick=()=>{ ensureAudio(); goCreate(false); };
+  $("btn-continue").onclick=()=>{ const x=load(); if(!x) return; S=x; ensureAudio(); renderHub(); showScreen("screen-hub"); };
+  $("btn-create-back").onclick=()=>showScreen("screen-title");
+  $("btn-create-go").onclick=()=>{ ensureAudio(); startNew(); };
+  $("btn-story-go").onclick=enterHub;
+  $("btn-start-week").onclick=()=>{ ensureAudio(); startWeek(); };
+  $("btn-clear-slots").onclick=()=>{ S.slots=[null,null,null]; renderHub(); };
+  $("btn-howto").onclick=()=>{
+    $("lb-title").textContent="怎麼玩";
+    $("lb-body").innerHTML=`<ol class="list-decimal ml-5 space-y-1"><li>為轉學生取名並入學。</li><li>每週挑選三個時段：課業活動會進入答題小遊戲；練功、休息、打工會改變體力、壓力和金錢；探索桃花林會觸發事件。</li><li>週結束有小考或挑戰：答對＝出拳，連擊會加重傷害並震動畫面。</li><li>壓力過高會被強制休息。選擇會影響多元結局與證書。</li><li>隨時可開「課文」查看注釋、題解、作者與賞析。進度會自動保存在這個瀏覽器。</li></ol>`;
+    $("lb-actions").innerHTML=""; openLB();
+  };
+  $("btn-open-teacher").onclick=()=>openTeacher("screen-title");
+  $("btn-open-book-title").onclick=()=>openBook("screen-title");
+  $("btn-book").onclick=()=>openBook("screen-hub");
+  $("btn-book-back").onclick=()=>showScreen(fromScreen==="screen-hub"&&S?"screen-hub":fromScreen);
+  $("btn-teacher-back").onclick=()=>showScreen(fromScreen||"screen-title");
+  $("btn-save").onclick=()=>{ if(S) save(); else toast("目前沒有進行中的遊戲"); };
+  $("btn-mute").onclick=()=>{ muted=!muted; $("btn-mute").textContent="音效："+(muted?"關":"開"); };
+  $("btn-menu").onclick=()=>{
+    $("lb-title").textContent="選單";
+    $("lb-body").innerHTML=`<p>存檔會留在這個瀏覽器裡。</p>`;
+    $("lb-actions").innerHTML="";
+    [["回養成儀表板",()=>{closeLB(); if(S){renderHub();showScreen("screen-hub");}}],
+     ["教師區",()=>{closeLB(); openTeacher("screen-hub");}],
+     ["回標題（不刪存檔）",()=>{closeLB(); showScreen("screen-title"); refreshContinue();}],
+     ["刪除存檔並重來",()=>{ localStorage.removeItem(SAVE_KEY); S=null; closeLB(); showScreen("screen-title"); refreshContinue(); toast("已刪存檔"); }]
+    ].forEach(([label,fn])=>{ const b=document.createElement("button"); b.type="button"; b.className="btn-ink font-ui text-white px-4 py-2"; b.textContent=label; b.onclick=fn; $("lb-actions").appendChild(b); });
+    openLB();
+  };
+  $("lb-close").onclick=closeLB;
+  $("lightbox").addEventListener("click", e=>{ if(e.target.id==="lightbox") closeLB(); });
+  $("btn-to-cert").onclick=()=>{ fillCert(); showScreen("screen-cert"); };
+  $("btn-end-replay").onclick=()=>goCreate(S&&S.quick);
+  $("btn-dl-cert").onclick=downloadCert;
+  $("btn-print-cert").onclick=()=>window.print();
+  $("btn-cert-home").onclick=()=>{ showScreen("screen-title"); refreshContinue(); };
+  $("btn-quick-mode").onclick=()=>goCreate(true);
+  $("btn-preview-ends").onclick=()=>{
+    const box=$("ends-preview");
+    const open=box.style.display==="block";
+    box.style.display=open?"none":"block";
+    box.innerHTML=ENDINGS.map(e=>`<p class="mb-2"><b>${e.name}</b>（${e.badge}）——${e.cond}<br><span class="text-stone-500">${e.text}</span></p>`).join("");
+  };
+}
+function refreshContinue(){
+  const x=load(); $("btn-continue").style.display=x?"inline-block":"none";
+}
+function boot(){
+  QUESTIONS.forEach((q,i)=>q._id=i);
+  spawnPetals(); bind(); refreshContinue();
+}
+document.addEventListener("DOMContentLoaded", boot);
+document.addEventListener("click", ensureAudio, {once:true});
+
+</script>
+</body>
+</html>
