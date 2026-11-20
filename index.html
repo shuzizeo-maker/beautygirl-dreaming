@@ -169,6 +169,17 @@ body{min-height:100vh;}
   #cert-paper{box-shadow:none;margin:0 auto;}
 }
 
+
+/* 背景音樂控制列（頂欄／標題浮動列共用） */
+#bgm-dock{display:none;position:fixed;top:10px;right:10px;z-index:50;
+  background:rgba(26,20,16,.9);border:1px solid rgba(244,184,168,.4);border-radius:999px;
+  padding:4px 8px 4px 6px;color:#f6eedf;align-items:center;gap:.35rem;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);}
+#bgm-controls{display:flex;align-items:center;gap:.35rem;}
+.bgm-slider{width:84px;height:22px;accent-color:#c9a227;cursor:pointer;vertical-align:middle;}
+@media (max-width:768px){.bgm-slider{width:72px;height:28px;}}
+@media print{#bgm-dock{display:none!important;}#bgm-controls{display:none!important;}}
+
 /* 卷軸引言 */
 .story-scroll{background:#fbf6eb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.2' fill='%23e8d0c4'/%3E%3C/svg%3E");
   border-left:6px solid #e45b4a;padding:1.25rem 1.4rem;line-height:2;}
@@ -190,6 +201,14 @@ body{min-height:100vh;}
 <!-- ========== 畫面區：以 style.display 切換，避免 CSS 權重衝突 ========== -->
 
 <div id="petals"></div>
+
+<div id="bgm-dock" class="font-ui">
+  <div id="bgm-controls">
+    <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-bgm" aria-label="背景音樂開關">🎵 音樂：開</button>
+    <input id="bgm-vol" class="bgm-slider" type="range" min="0" max="100" value="25" step="1" aria-label="背景音樂音量">
+  </div>
+</div>
+
 <header id="topbar" class="font-ui">
   <div class="max-w-6xl mx-auto px-3 py-2 flex flex-wrap items-center gap-2">
     <div class="font-display text-xl text-rose-200 tracking-wider">鐵拳教育</div>
@@ -199,6 +218,7 @@ body{min-height:100vh;}
     <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-book">課文</button>
     <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-save">存檔</button>
     <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-mute">音效：開</button>
+    <div id="bgm-slot-top" class="flex items-center"></div>
     <button type="button" class="btn-ghost px-3 py-1 text-sm" id="btn-menu">選單</button>
   </div>
 </header>
@@ -717,6 +737,8 @@ function showScreen(id){
   window.scrollTo(0,0);
   const hideTop = (id==="screen-title"||id==="screen-create"||((id==="screen-book"||id==="screen-teacher")&&!S));
   $("topbar").style.display = hideTop ? "none" : "block";
+  placeBgmControls(!hideTop);
+  setBgmMood(SCREEN_MOOD[id] || "serene");
 }
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.classList.remove("on");t.style.display="none";},1800); }
 function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
@@ -724,7 +746,7 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
 let audioCtx=null, muted=false;
-function ensureAudio(){ if(!audioCtx){ const A=window.AudioContext||window.webkitAudioContext; if(A) audioCtx=new A(); } if(audioCtx && audioCtx.state==="suspended") audioCtx.resume(); }
+function ensureAudio(){ unlockAndStartBgm(); }
 function beep(freq, dur, type="square", vol=0.05, delay=0){
   if(muted||!audioCtx) return;
   const o=audioCtx.createOscillator(), g=audioCtx.createGain();
@@ -739,6 +761,363 @@ function sfxWrong(){ beep(180,0.18,"sawtooth",0.06); }
 function sfxPunch(){ beep(90,0.12,"sawtooth",0.07); beep(220,0.08,"square",0.04,0.04); }
 function sfxCombo(){ beep(659,0.07,"square",0.05); beep(880,0.1,"square",0.05,0.06); beep(1174,0.14,"square",0.05,0.12); }
 function sfxOk(){ beep(440,0.1,"triangle",0.04); }
+
+
+/* ========== 古風 BGM（Web Audio 程序生成，無外部音檔） ==========
+   宮商角徵羽五聲音階；古箏撥弦（Karplus-Strong＋刮奏）、簫／笛（正弦＋顫音＋氣聲）、
+   古琴低音持續音、堂鼓；生成脈衝的殘響。lookahead 排程，切換畫面時交叉淡入淡出。 */
+const BGM_PREF_KEY = "tiequan-taohua-bgm-pref";
+const PENTA = [0, 2, 4, 7, 9]; /* 宮商角徵羽（十二平均律半音） */
+const BGM_MOODS = {
+  calm:   { bpm:52, root:196.00, density:.42, drums:0,  flute:.38, zheng:.7,  drone:.11, grace:.14 }, /* 標題 */
+  serene: { bpm:58, root:196.00, density:.52, drums:0,  flute:.42, zheng:.76, drone:.1,  grace:.2  }, /* 課表／研讀 */
+  battle: { bpm:84, root:220.00, density:.78, drums:1,  flute:.16, zheng:.86, drone:.07, grace:.22 }, /* 戰鬥／小考 */
+  solemn: { bpm:48, root:174.61, density:.38, drums:0,  flute:.55, zheng:.48, drone:.18, grace:.08 }  /* 結局／證書 */
+};
+const SCREEN_MOOD = {
+  "screen-title":"calm", "screen-create":"calm",
+  "screen-story":"serene", "screen-hub":"serene", "screen-activity":"serene",
+  "screen-week":"serene", "screen-book":"serene", "screen-teacher":"serene",
+  "screen-battle":"battle",
+  "screen-ending":"solemn", "screen-cert":"solemn"
+};
+
+let bgmOn=true, bgmVol=0.25, bgmUnlocked=false, bgmMood="calm";
+let bgmTimer=null, bgmNext=0, bgmStep=0, bgmPhrase=null, bgmPhrasePos=0;
+let bgmMaster=null, bgmDry=null, bgmWet=null, bgmConv=null, bgmLive=null, bgmOld=null;
+let bgmDroneNodes=[], bgmNoise=null, bgmImpulse=null;
+let bgmFadeTok=0;
+window.__BGM = { mood:()=>bgmMood, on:()=>bgmOn, vol:()=>bgmVol, unlocked:()=>bgmUnlocked };
+
+function loadBgmPref(){
+  try{
+    const p=JSON.parse(localStorage.getItem(BGM_PREF_KEY)||"null");
+    if(p && typeof p==="object"){
+      if(typeof p.on==="boolean") bgmOn=p.on;
+      if(typeof p.vol==="number") bgmVol=clamp(p.vol,0,1);
+    }
+  }catch(e){}
+}
+function saveBgmPref(){
+  try{ localStorage.setItem(BGM_PREF_KEY, JSON.stringify({on:bgmOn, vol:bgmVol})); }catch(e){}
+}
+function updateBgmUI(){
+  const btn=$("btn-bgm"), sl=$("bgm-vol");
+  if(btn) btn.textContent = "🎵 音樂：" + (bgmOn?"開":"關");
+  if(sl && Math.abs(Number(sl.value)/100 - bgmVol)>0.005) sl.value = String(Math.round(bgmVol*100));
+}
+
+function makeNoiseBuffer(ctx, sec){
+  const n=Math.floor(ctx.sampleRate*sec), buf=ctx.createBuffer(1,n,ctx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  return buf;
+}
+function makeImpulse(ctx, sec, decay){
+  const n=Math.floor(ctx.sampleRate*sec), buf=ctx.createBuffer(2,n,ctx.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=buf.getChannelData(c);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n, decay);
+  }
+  return buf;
+}
+function pentaFreq(root, deg, oct){
+  const semi=PENTA[((deg%5)+5)%5] + 12*oct;
+  return root * Math.pow(2, semi/12);
+}
+function bgmCleanup(nodes){
+  nodes.forEach(n=>{ try{ n.disconnect(); }catch(e){} try{ if(n.stop) n.stop(); }catch(e){} });
+}
+
+function initBgmGraph(){
+  if(!audioCtx || bgmMaster) return;
+  bgmNoise = makeNoiseBuffer(audioCtx, 1.2);
+  bgmImpulse = makeImpulse(audioCtx, 1.9, 2.15);
+  bgmMaster = audioCtx.createGain();
+  bgmMaster.gain.value = 0;
+  bgmDry = audioCtx.createGain(); bgmDry.gain.value = 0.62;
+  bgmWet = audioCtx.createGain(); bgmWet.gain.value = 0.38;
+  bgmConv = audioCtx.createConvolver(); bgmConv.buffer = bgmImpulse;
+  bgmMaster.connect(bgmDry); bgmDry.connect(audioCtx.destination);
+  bgmMaster.connect(bgmConv); bgmConv.connect(bgmWet); bgmWet.connect(audioCtx.destination);
+  newLiveBus();
+}
+function newLiveBus(){
+  bgmLive = audioCtx.createGain();
+  bgmLive.gain.value = 1;
+  bgmLive.connect(bgmMaster);
+}
+function startDrone(mood, when){
+  stopDrone(when, 0.8);
+  if(!bgmLive) return;
+  const root=mood.root/2; /* 低八度宮音 */
+  const nodes=[];
+  [root, root*1.5, root*0.997].forEach((f,i)=>{
+    const o=audioCtx.createOscillator();
+    o.type = i===1 ? "triangle" : "sine";
+    o.frequency.value = f;
+    const g=audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(mood.drone*(i===1?0.35:0.55), when+1.2);
+    const lp=audioCtx.createBiquadFilter();
+    lp.type="lowpass"; lp.frequency.value=420;
+    o.connect(lp); lp.connect(g); g.connect(bgmLive);
+    o.start(when);
+    nodes.push(o,g,lp);
+  });
+  bgmDroneNodes=nodes;
+}
+function stopDrone(when, fade){
+  const nodes=bgmDroneNodes; bgmDroneNodes=[];
+  if(!nodes.length) return;
+  const t=when|| (audioCtx?audioCtx.currentTime:0);
+  nodes.forEach(n=>{
+    if(n.gain){
+      try{
+        n.gain.cancelScheduledValues(t);
+        n.gain.setValueAtTime(Math.max(0.0001, n.gain.value), t);
+        n.gain.exponentialRampToValueAtTime(0.0001, t+fade);
+      }catch(e){}
+    }
+  });
+  setTimeout(()=>bgmCleanup(nodes), (fade+0.15)*1000);
+}
+
+/* 古箏：Karplus-Strong 撥弦，偶加短滑音裝飾 */
+function playZheng(freq, when, dur, vel, grace){
+  if(!bgmLive || !audioCtx) return;
+  const sr=audioCtx.sampleRate;
+  const n=Math.max(2, Math.round(sr/freq));
+  const buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  for(let i=1;i<n;i++) d[i]=(d[i]+d[i-1])*0.5;
+  const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true;
+  const delay=audioCtx.createDelay(0.2); delay.delayTime.value=n/sr;
+  const filt=audioCtx.createBiquadFilter(); filt.type="lowpass"; filt.frequency.value=Math.min(sr*0.45, freq*6.5); filt.Q.value=0.15;
+  const fb=audioCtx.createGain(); fb.gain.value=0.915;
+  const out=audioCtx.createGain();
+  const v=Math.max(0.0001, vel);
+  out.gain.setValueAtTime(v, when);
+  out.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+  src.connect(filt); filt.connect(delay); delay.connect(fb); fb.connect(filt); delay.connect(out); out.connect(bgmLive);
+  if(grace){
+    delay.delayTime.setValueAtTime((n/sr)*0.92, when);
+    delay.delayTime.exponentialRampToValueAtTime(n/sr, when+0.06);
+  }
+  src.start(when); src.stop(when+dur+0.04);
+  src.onended=()=>{ try{ src.disconnect(); delay.disconnect(); filt.disconnect(); fb.disconnect(); out.disconnect(); }catch(e){} };
+}
+/* 簫／笛：正弦＋慢顫音＋氣聲噪音 */
+function playFlute(freq, when, dur, vel){
+  if(!bgmLive || !audioCtx) return;
+  const osc=audioCtx.createOscillator(); osc.type="sine";
+  osc.frequency.setValueAtTime(freq*0.985, when);
+  osc.frequency.exponentialRampToValueAtTime(freq, when+0.09);
+  const vib=audioCtx.createOscillator(); vib.frequency.value=5.1;
+  const vg=audioCtx.createGain(); vg.gain.value=freq*0.007;
+  vib.connect(vg); vg.connect(osc.frequency);
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vel), when+0.1);
+  g.gain.setValueAtTime(Math.max(0.0002, vel*0.92), when+Math.max(0.2, dur-0.22));
+  g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+  const ns=audioCtx.createBufferSource(); ns.buffer=bgmNoise; ns.loop=true;
+  const bp=audioCtx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=freq*2.1; bp.Q.value=1.1;
+  const ng=audioCtx.createGain(); ng.gain.value=vel*0.07;
+  osc.connect(g); ns.connect(bp); bp.connect(ng); ng.connect(g); g.connect(bgmLive);
+  osc.start(when); osc.stop(when+dur+0.05);
+  vib.start(when); vib.stop(when+dur+0.05);
+  ns.start(when); ns.stop(when+dur+0.05);
+  osc.onended=()=>{ try{ osc.disconnect(); vib.disconnect(); vg.disconnect(); g.disconnect(); ns.disconnect(); bp.disconnect(); ng.disconnect(); }catch(e){} };
+}
+/* 堂鼓：低頻槌擊＋短噪音皮聲 */
+function playDrum(when, kind, vel){
+  if(!bgmLive || !audioCtx) return;
+  const low = kind==="don";
+  const osc=audioCtx.createOscillator(); osc.type="sine";
+  const f0=low?78:190;
+  osc.frequency.setValueAtTime(f0, when);
+  osc.frequency.exponentialRampToValueAtTime(f0*(low?0.45:0.65), when+(low?0.22:0.08));
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(Math.max(0.0001, vel*(low?0.22:0.12)), when);
+  g.gain.exponentialRampToValueAtTime(0.0001, when+(low?0.38:0.11));
+  const ns=audioCtx.createBufferSource(); ns.buffer=bgmNoise;
+  const bp=audioCtx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=low?220:900; bp.Q.value=1.8;
+  const ng=audioCtx.createGain();
+  ng.gain.setValueAtTime(vel*(low?0.12:0.1), when);
+  ng.gain.exponentialRampToValueAtTime(0.0001, when+(low?0.14:0.07));
+  osc.connect(g); g.connect(bgmLive);
+  ns.connect(bp); bp.connect(ng); ng.connect(bgmLive);
+  osc.start(when); osc.stop(when+0.42);
+  ns.start(when); ns.stop(when+0.2);
+  osc.onended=()=>{ try{ osc.disconnect(); g.disconnect(); ns.disconnect(); bp.disconnect(); ng.disconnect(); }catch(e){} };
+}
+
+function makePhrase(mood){
+  const len=pick([8,12,16,16]);
+  const notes=[];
+  let deg=pick([0,0,2,4]), i=0;
+  while(i<len){
+    if(Math.random()>mood.density){ i+=1; continue; }
+    const longish=Math.random()<0.35;
+    const dur=longish? pick([2,2,4]) : pick([1,1,1,2]);
+    deg = (deg + pick([-2,-1,-1,0,1,1,2]) + 10) % 5;
+    const oct = mood.drums ? pick([0,1,1,2]) : pick([0,0,1,1]);
+    const flute = longish && Math.random()<mood.flute;
+    notes.push({at:i, deg, oct, dur, flute, grace: !flute && Math.random()<mood.grace});
+    i+=dur;
+  }
+  return {len, notes};
+}
+function scheduleStep(when, step, mood){
+  if(!bgmPhrase || bgmPhrasePos>=bgmPhrase.len){
+    bgmPhrase=makePhrase(mood); bgmPhrasePos=0;
+  }
+  const local=bgmPhrasePos;
+  bgmPhrase.notes.forEach(nt=>{
+    if(nt.at!==local) return;
+    const durSec = nt.dur * (60/mood.bpm) * 0.5; /* 以八分音符為一步 */
+    const freq=pentaFreq(mood.root, nt.deg, nt.oct);
+    if(nt.flute) playFlute(freq, when, durSec*1.15, 0.085);
+    else playZheng(freq, when, Math.min(2.4, durSec*1.6+0.35), 0.11, nt.grace);
+  });
+  /* 偶發刮奏（連續短撥） */
+  if(!mood.drums && Math.random()<0.045){
+    const start=pick([0,1,2]);
+    for(let k=0;k<4;k++) playZheng(pentaFreq(mood.root,(start+k)%5,1), when+k*0.055, 0.35, 0.06, true);
+  }
+  if(mood.drums){
+    const p=step%16;
+    if(p===0||p===8) playDrum(when, "don", 0.9);
+    else if(p===4||p===12) playDrum(when, "ka", 0.7);
+    else if(p===10 && Math.random()<0.7) playDrum(when, "don", 0.55);
+    else if((p===6||p===14) && Math.random()<0.5) playDrum(when, "ka", 0.45);
+  }
+  bgmPhrasePos++;
+}
+
+function bgmScheduler(){
+  if(!audioCtx || !bgmOn || document.hidden || !bgmUnlocked) return;
+  const horizon=audioCtx.currentTime + 0.18;
+  const mood=BGM_MOODS[bgmMood]||BGM_MOODS.calm;
+  const stepDur=(60/mood.bpm)*0.5;
+  let guard=0;
+  while(bgmNext<horizon && guard++<24){
+    scheduleStep(bgmNext, bgmStep, mood);
+    bgmNext += stepDur;
+    bgmStep++;
+  }
+}
+function startBgmClock(){
+  if(bgmTimer) return;
+  if(!audioCtx) return;
+  bgmNext = audioCtx.currentTime + 0.08;
+  bgmScheduler();
+  bgmTimer = setInterval(bgmScheduler, 80);
+}
+function stopBgmClock(){
+  if(bgmTimer){ clearInterval(bgmTimer); bgmTimer=null; }
+}
+
+function bgmTargetGain(){
+  if(!bgmOn || document.hidden || !bgmUnlocked) return 0;
+  return bgmVol;
+}
+function rampMaster(to, sec){
+  if(!bgmMaster || !audioCtx) return;
+  const t=audioCtx.currentTime;
+  bgmMaster.gain.cancelScheduledValues(t);
+  bgmMaster.gain.setValueAtTime(Math.max(0.0001, bgmMaster.gain.value||0.0001), t);
+  if(to<=0) bgmMaster.gain.exponentialRampToValueAtTime(0.0001, t+sec);
+  else bgmMaster.gain.exponentialRampToValueAtTime(Math.max(0.0001,to), t+sec);
+}
+
+function setBgmMood(mood){
+  if(!BGM_MOODS[mood]) mood="calm";
+  if(mood===bgmMood && bgmLive) { window.__BGM.mood=()=>bgmMood; return; }
+  const prev=bgmMood; bgmMood=mood;
+  window.__BGM = { mood:()=>bgmMood, on:()=>bgmOn, vol:()=>bgmVol, unlocked:()=>bgmUnlocked };
+  if(!audioCtx || !bgmUnlocked || !bgmMaster) return;
+  const t=audioCtx.currentTime, fade=1.5, tok=++bgmFadeTok;
+  /* 交叉淡出舊总线，新乐句走上新总线 */
+  if(bgmLive){
+    const dying=bgmLive;
+    dying.gain.cancelScheduledValues(t);
+    dying.gain.setValueAtTime(Math.max(0.0001, dying.gain.value||1), t);
+    dying.gain.exponentialRampToValueAtTime(0.0001, t+fade);
+    bgmOld=dying;
+    setTimeout(()=>{ if(tok!==bgmFadeTok) return; try{ dying.disconnect(); }catch(e){} if(bgmOld===dying) bgmOld=null; }, (fade+0.2)*1000);
+  }
+  stopDrone(t, fade*0.7);
+  newLiveBus();
+  bgmLive.gain.setValueAtTime(0.0001, t);
+  bgmLive.gain.exponentialRampToValueAtTime(1, t+fade);
+  bgmPhrase=null; bgmPhrasePos=0;
+  startDrone(BGM_MOODS[mood], t+0.15);
+}
+
+function unlockAndStartBgm(){
+  const A=window.AudioContext||window.webkitAudioContext;
+  if(!A) return;
+  if(!audioCtx) audioCtx=new A();
+  if(audioCtx.state==="suspended") audioCtx.resume();
+  /* iOS：手勢內播一段極短靜音，解鎖音訊 */
+  try{
+    const b=audioCtx.createBuffer(1,1,audioCtx.sampleRate);
+    const s=audioCtx.createBufferSource(); s.buffer=b; s.connect(audioCtx.destination); s.start(0);
+    s.onended=()=>{ try{s.disconnect();}catch(e){} };
+  }catch(e){}
+  initBgmGraph();
+  const first=!bgmUnlocked;
+  bgmUnlocked=true;
+  if(bgmOn){
+    rampMaster(bgmVol, first?1.2:0.4);
+    startDrone(BGM_MOODS[bgmMood]||BGM_MOODS.calm, audioCtx.currentTime+0.05);
+    startBgmClock();
+  }
+  window.__BGM = { mood:()=>bgmMood, on:()=>bgmOn, vol:()=>bgmVol, unlocked:()=>bgmUnlocked };
+}
+function setBgmOn(on){
+  bgmOn=!!on; saveBgmPref(); updateBgmUI();
+  if(!audioCtx){ return; }
+  if(bgmOn){
+    if(!bgmUnlocked) return;
+    if(audioCtx.state==="suspended") audioCtx.resume();
+    rampMaster(bgmVol, 0.5);
+    if(!bgmDroneNodes.length) startDrone(BGM_MOODS[bgmMood]||BGM_MOODS.calm, audioCtx.currentTime);
+    startBgmClock();
+  }else{
+    rampMaster(0, 0.4);
+    stopBgmClock();
+    stopDrone(audioCtx.currentTime, 0.4);
+  }
+}
+function setBgmVol(v){
+  bgmVol=clamp(v,0,1); saveBgmPref(); updateBgmUI();
+  if(bgmUnlocked && bgmOn && !document.hidden) rampMaster(bgmVol, 0.12);
+}
+function placeBgmControls(topbarVisible){
+  const box=$("bgm-controls"), dock=$("bgm-dock"), slot=$("bgm-slot-top");
+  if(!box||!dock||!slot) return;
+  if(topbarVisible){
+    slot.appendChild(box);
+    dock.style.display="none";
+  }else{
+    dock.appendChild(box);
+    dock.style.display="flex";
+  }
+}
+function onBgmVisibility(){
+  if(!bgmUnlocked || !audioCtx) return;
+  if(document.hidden){
+    rampMaster(0, 0.15);
+    stopBgmClock();
+  }else if(bgmOn){
+    if(audioCtx.state==="suspended") audioCtx.resume();
+    rampMaster(bgmVol, 0.4);
+    startBgmClock();
+  }
+}
+
 
 /* ========== 狀態 ========== */
 let S=null, lookSel="ink", fromScreen="screen-title", pendingQuick=false;
@@ -1245,6 +1624,9 @@ function bind(){
   $("btn-teacher-back").onclick=()=>showScreen(fromScreen||"screen-title");
   $("btn-save").onclick=()=>{ if(S) save(); else toast("目前沒有進行中的遊戲"); };
   $("btn-mute").onclick=()=>{ muted=!muted; $("btn-mute").textContent="音效："+(muted?"關":"開"); };
+  $("btn-bgm").onclick=()=>{ ensureAudio(); setBgmOn(!bgmOn); };
+  $("bgm-vol").addEventListener("input", ev=>{ ensureAudio(); setBgmVol(Number(ev.target.value)/100); });
+  $("bgm-vol").addEventListener("change", ev=>{ setBgmVol(Number(ev.target.value)/100); });
   $("btn-menu").onclick=()=>{
     $("lb-title").textContent="選單";
     $("lb-body").innerHTML=`<p>存檔會留在這個瀏覽器裡。</p>`;
@@ -1276,10 +1658,17 @@ function refreshContinue(){
 }
 function boot(){
   QUESTIONS.forEach((q,i)=>q._id=i);
+  loadBgmPref();
   spawnPetals(); bind(); refreshContinue();
+  updateBgmUI();
+  placeBgmControls(false);
+  document.addEventListener("visibilitychange", onBgmVisibility);
+  const unlock=()=>ensureAudio();
+  document.addEventListener("pointerdown", unlock, {once:true});
+  document.addEventListener("keydown", unlock, {once:true});
+  document.addEventListener("click", unlock, {once:true});
 }
 document.addEventListener("DOMContentLoaded", boot);
-document.addEventListener("click", ensureAudio, {once:true});
 
 </script>
 </body>
