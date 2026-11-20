@@ -146,7 +146,7 @@ body{min-height:100vh;}
 .note-link:hover{background:#fde8d8;}
 
 /* 證書 */
-#cert-paper{width:min(720px,100%);aspect-ratio:1.35/1;background:
+#cert-paper{width:min(720px,100%);min-height:calc(min(720px,100vw) / 1.35);background:
   linear-gradient(180deg,#fffaf0 0%,#f7ecd8 100%);
   border:12px solid #7f1d1d;box-shadow:0 0 0 4px #c9a227, 0 20px 50px rgba(0,0,0,.4);
   position:relative;color:#1a1410;overflow:hidden;}
@@ -1133,7 +1133,7 @@ function fillCert(){
     已完成本課養成修煉，獲結局「<b>${end.name}</b>」（${end.badge}）。<br>
     答對 ${S.counters.quizOk}／${S.counters.quizAll} 題，最高連擊 ${S.counters.comboBest}，戰績 ${S.counters.wins} 勝。`;
   $("cert-stats").innerHTML=["文力 "+S.stats.wen,"字力 "+S.stats.zi,"譯力 "+S.stats.yi,"思辨 "+S.stats.si,"體力 "+S.stats.vit,"壓力 "+S.stats.stress,"師父好感 "+S.stats.likeMaster,"同學好感 "+S.stats.likePeer].map(t=>`<div>${t}</div>`).join("");
-  $("cert-meta").innerHTML=`${date}<br>指導：嚴振風老師　鐵拳社<br>教材：高一國文〈桃花源記〉`;
+  $("cert-meta").innerHTML=`${date}<br>指導：嚴振風老師　鐵拳社<br>教材：高一國文〈桃花源記〉<br><b class="text-base text-rose-900">認證者：臺北市永春高中　龎海珊　老師</b>`;
   $("cert-stamp").innerHTML=end.stamp.replace(/(.{2})/,"$1<br>");
 }
 function downloadCert(){
@@ -1165,6 +1165,7 @@ function downloadCert(){
   ctx.font="26px 'Noto Sans TC',sans-serif";
   ctx.fillText(`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`, 180, 980);
   ctx.fillText("指導：嚴振風老師　教材：高一國文〈桃花源記〉", 180, 1030);
+  ctx.fillStyle="#881337"; ctx.font="bold 30px 'Noto Serif TC',serif"; ctx.fillText("認證者：臺北市永春高中　龎海珊　老師", 180, 1085); ctx.fillStyle="#1a1410";
   // stamp
   ctx.save(); ctx.translate(1280,960); ctx.rotate(-0.18);
   ctx.strokeStyle="#b91c1c"; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.stroke();
